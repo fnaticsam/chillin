@@ -14,6 +14,34 @@ const quote =
   "There's not a problem that I can't fix, cause I can do it in the mix";
 const words = quote.split(" ");
 
+/*
+ * Karaoke timing with a dramatic pause before "cause" (index 8).
+ *
+ * Layout across scroll 0.15 → 0.75:
+ *   0.15 – 0.40  →  words 0-7   ("There's not a problem that I can't fix,")
+ *   0.40 – 0.50  →  PAUSE (nothing new lights up)
+ *   0.50 – 0.72  →  words 8-15  ("cause I can do it in the mix")
+ *
+ * Each word gets a "center" point where it's brightest, and fades
+ * in before / fades out after — like a spotlight sweeping across.
+ */
+function getWordCenter(index: number): number {
+  const pauseWord = 8; // "cause"
+  if (index < pauseWord) {
+    // Words 0-7 spread across 0.15 → 0.40
+    return 0.15 + (index / (pauseWord - 1)) * 0.25;
+  } else {
+    // Words 8-15 spread across 0.50 → 0.72
+    const i = index - pauseWord;
+    const count = words.length - pauseWord;
+    return 0.50 + (i / (count - 1)) * 0.22;
+  }
+}
+
+// How wide the "spotlight" is — word fades in over this range before center
+// and fades back out over this range after center
+const SPOTLIGHT_HALF = 0.06;
+
 /* ── Smiley face SVG ── */
 function Smiley({ size }: { size: number }) {
   return (
@@ -37,16 +65,39 @@ function Smiley({ size }: { size: number }) {
 
 /* ── Floating smiley positions ── */
 const floatingSmileys = [
-  { x: 5, y: 15, size: 36, opacity: 0.35, speed: 50, floatAmp: 14, floatDur: 4.0 },
-  { x: 88, y: 10, size: 28, opacity: 0.25, speed: -40, floatAmp: 10, floatDur: 5.2 },
-  { x: 15, y: 70, size: 24, opacity: 0.30, speed: 35, floatAmp: 12, floatDur: 3.6 },
-  { x: 92, y: 65, size: 32, opacity: 0.30, speed: -45, floatAmp: 16, floatDur: 4.8 },
-  { x: 45, y: 5, size: 22, opacity: 0.20, speed: 30, floatAmp: 8, floatDur: 5.0 },
-  { x: 72, y: 80, size: 26, opacity: 0.25, speed: -35, floatAmp: 11, floatDur: 4.4 },
-  { x: 30, y: 85, size: 20, opacity: 0.20, speed: 40, floatAmp: 10, floatDur: 3.8 },
-  { x: 60, y: 8, size: 18, opacity: 0.18, speed: -25, floatAmp: 9, floatDur: 5.6 },
-  { x: 2, y: 45, size: 22, opacity: 0.22, speed: 45, floatAmp: 13, floatDur: 4.2 },
-  { x: 96, y: 40, size: 20, opacity: 0.20, speed: -38, floatAmp: 10, floatDur: 3.4 },
+  // Top row
+  { x: 3,  y: 5,  size: 34, opacity: 0.32, speed: 50,  floatAmp: 14, floatDur: 4.0 },
+  { x: 18, y: 8,  size: 22, opacity: 0.20, speed: -28, floatAmp: 8,  floatDur: 5.4 },
+  { x: 35, y: 3,  size: 26, opacity: 0.22, speed: 32,  floatAmp: 10, floatDur: 4.6 },
+  { x: 55, y: 6,  size: 18, opacity: 0.18, speed: -22, floatAmp: 9,  floatDur: 5.8 },
+  { x: 75, y: 4,  size: 24, opacity: 0.24, speed: 36,  floatAmp: 11, floatDur: 4.2 },
+  { x: 90, y: 8,  size: 30, opacity: 0.28, speed: -42, floatAmp: 12, floatDur: 5.0 },
+  // Upper-mid
+  { x: 8,  y: 25, size: 20, opacity: 0.18, speed: 28,  floatAmp: 10, floatDur: 5.2 },
+  { x: 28, y: 22, size: 16, opacity: 0.15, speed: -24, floatAmp: 7,  floatDur: 4.8 },
+  { x: 50, y: 20, size: 14, opacity: 0.12, speed: 20,  floatAmp: 6,  floatDur: 5.6 },
+  { x: 70, y: 24, size: 18, opacity: 0.16, speed: -30, floatAmp: 8,  floatDur: 4.4 },
+  { x: 95, y: 22, size: 22, opacity: 0.20, speed: 34,  floatAmp: 10, floatDur: 5.0 },
+  // Middle band (near text — smaller & more subtle)
+  { x: 2,  y: 45, size: 18, opacity: 0.14, speed: 22,  floatAmp: 8,  floatDur: 4.6 },
+  { x: 22, y: 48, size: 12, opacity: 0.10, speed: -18, floatAmp: 5,  floatDur: 5.4 },
+  { x: 42, y: 42, size: 14, opacity: 0.10, speed: 16,  floatAmp: 6,  floatDur: 6.0 },
+  { x: 62, y: 50, size: 12, opacity: 0.10, speed: -20, floatAmp: 5,  floatDur: 5.2 },
+  { x: 82, y: 44, size: 16, opacity: 0.12, speed: 24,  floatAmp: 7,  floatDur: 4.8 },
+  { x: 97, y: 48, size: 14, opacity: 0.12, speed: -18, floatAmp: 6,  floatDur: 5.6 },
+  // Lower-mid
+  { x: 10, y: 68, size: 20, opacity: 0.18, speed: -32, floatAmp: 10, floatDur: 4.4 },
+  { x: 30, y: 72, size: 16, opacity: 0.16, speed: 26,  floatAmp: 8,  floatDur: 5.0 },
+  { x: 48, y: 70, size: 18, opacity: 0.14, speed: -22, floatAmp: 7,  floatDur: 5.8 },
+  { x: 68, y: 68, size: 22, opacity: 0.20, speed: 30,  floatAmp: 9,  floatDur: 4.2 },
+  { x: 88, y: 72, size: 16, opacity: 0.16, speed: -28, floatAmp: 8,  floatDur: 5.4 },
+  // Bottom row
+  { x: 5,  y: 88, size: 28, opacity: 0.26, speed: 40,  floatAmp: 12, floatDur: 3.8 },
+  { x: 20, y: 92, size: 20, opacity: 0.20, speed: -34, floatAmp: 10, floatDur: 4.6 },
+  { x: 40, y: 88, size: 24, opacity: 0.22, speed: 36,  floatAmp: 11, floatDur: 5.2 },
+  { x: 58, y: 90, size: 18, opacity: 0.18, speed: -26, floatAmp: 9,  floatDur: 4.0 },
+  { x: 78, y: 88, size: 26, opacity: 0.24, speed: 38,  floatAmp: 12, floatDur: 3.6 },
+  { x: 94, y: 92, size: 32, opacity: 0.30, speed: -44, floatAmp: 14, floatDur: 4.8 },
 ];
 
 function FloatingSmiley({
@@ -97,7 +148,6 @@ export default function PullQuote() {
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
-    // Start tracking well before section enters, finish after it leaves
     offset: ["start end", "end start"],
   });
 
@@ -128,10 +178,10 @@ export default function PullQuote() {
         ))}
       </div>
 
-      <div className="relative max-w-[1200px] mx-auto px-8 md:px-12">
+      <div className="relative max-w-[1400px] mx-auto px-6 md:px-12">
         <div className="relative flex items-center justify-center min-h-[160px] md:min-h-[200px]">
           <div className="relative z-[1] text-center">
-            <p className="font-serif text-2xl md:text-4xl lg:text-[2.75rem] font-semibold leading-tight whitespace-nowrap mx-auto mb-3 italic">
+            <p className="font-serif text-2xl md:text-4xl lg:text-[2.75rem] font-semibold leading-tight mx-auto mb-4 italic whitespace-nowrap">
               {words.map((word, i) => (
                 <KaraokeWord
                   key={i}
@@ -143,7 +193,9 @@ export default function PullQuote() {
               ))}
             </p>
             <AnimateOnScroll>
-              <p className="text-sm text-paper/40 font-medium">Ini Kamoze</p>
+              <p className="text-sm text-paper/40 font-medium tracking-wide">
+                Ini Kamoze
+              </p>
             </AnimateOnScroll>
           </div>
         </div>
@@ -155,7 +207,6 @@ export default function PullQuote() {
 function KaraokeWord({
   word,
   index,
-  total,
   progress,
 }: {
   word: string;
@@ -163,52 +214,42 @@ function KaraokeWord({
   total: number;
   progress: MotionValue<number>;
 }) {
-  // Evenly distribute words across scroll range 0.2 → 0.7
-  // (section is tracked from "start end" to "end start", so
-  //  0.2 ≈ section entering viewport, 0.7 ≈ section about to leave)
-  const rangeStart = 0.2;
-  const rangeEnd = 0.65;
-  const wordWidth = (rangeEnd - rangeStart) / total;
-  const activate = rangeStart + index * wordWidth;
-  const peak = activate + wordWidth * 0.5;
-  const settle = activate + wordWidth;
+  const center = getWordCenter(index);
+  const fadeIn = center - SPOTLIGHT_HALF;
+  const fadeOut = center + SPOTLIGHT_HALF;
 
-  // Color: sharp karaoke sweep from dim to white
+  // Color: grey → white at center → grey again (spotlight sweep)
   const color = useTransform(
     progress,
-    [activate, settle],
-    ["rgba(100, 100, 110, 0.35)", "rgba(255, 255, 255, 1)"]
+    [fadeIn, center, fadeOut],
+    [
+      "rgba(120, 120, 135, 0.4)",
+      "rgba(255, 255, 255, 1)",
+      "rgba(120, 120, 135, 0.4)",
+    ]
   );
 
-  // Opacity stays visible throughout but ramps up
-  const opacity = useTransform(
-    progress,
-    [activate, settle],
-    [0.35, 1]
-  );
-
-  // Bounce: pop up, overshoot, settle
+  // Bounce: pops up at center, settles back
   const rawY = useTransform(
     progress,
-    [activate, peak, settle],
-    [12, -8, 0]
+    [fadeIn, center - 0.01, center, center + 0.01, fadeOut],
+    [0, -2, -10, -2, 0]
   );
-  const y = useSpring(rawY, { stiffness: 400, damping: 15, mass: 0.5 });
+  const y = useSpring(rawY, { stiffness: 500, damping: 18, mass: 0.4 });
 
-  // Scale: pop bigger at activation, settle back
+  // Scale: pops noticeably bigger at center
   const rawScale = useTransform(
     progress,
-    [activate, peak, settle],
-    [0.95, 1.12, 1.0]
+    [fadeIn, center, fadeOut],
+    [1.0, 1.22, 1.0]
   );
-  const scale = useSpring(rawScale, { stiffness: 400, damping: 15, mass: 0.5 });
+  const scale = useSpring(rawScale, { stiffness: 500, damping: 18, mass: 0.4 });
 
   return (
     <motion.span
-      className="inline-block mr-[0.25em]"
+      className="inline-block mr-[0.28em]"
       style={{
         color,
-        opacity,
         y,
         scale,
       }}

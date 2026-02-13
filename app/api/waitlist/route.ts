@@ -1,47 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
-import crypto from "crypto";
+import { createClient, type EdgeConfigClient } from "@vercel/edge-config";
+
+export const dynamic = "force-dynamic";
+
+/* ── Edge Config client (lazy, avoids build-time crash) ── */
+let _edgeConfig: EdgeConfigClient | null = null;
+function getEdgeConfig() {
+  if (!_edgeConfig) {
+    _edgeConfig = createClient(process.env.EDGE_CONFIG!);
+  }
+  return _edgeConfig;
+}
 
 /* ── Types ── */
 interface WaitlistEntry {
   email: string;
   refCode: string;
   referredBy: string | null;
+  position: number;
   createdAt: string;
 }
 
-const DATA_FILE = path.join(process.cwd(), "waitlist.json");
-
 function generateRefCode(): string {
-  return crypto.randomBytes(4).toString("hex").toUpperCase(); // e.g. "A3F1BC09"
-}
-
-async function readWaitlist(): Promise<WaitlistEntry[]> {
-  try {
-    const data = await fs.readFile(DATA_FILE, "utf-8");
-    const parsed = JSON.parse(data);
-
-    // Migrate from old format (string[]) to new format (WaitlistEntry[])
-    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "string") {
-      const migrated: WaitlistEntry[] = parsed.map((email: string) => ({
-        email,
-        refCode: generateRefCode(),
-        referredBy: null,
-        createdAt: new Date().toISOString(),
-      }));
-      await writeWaitlist(migrated);
-      return migrated;
-    }
-
-    return parsed;
-  } catch {
-    return [];
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
   }
+  return code;
 }
 
-async function writeWaitlist(entries: WaitlistEntry[]): Promise<void> {
-  await fs.writeFile(DATA_FILE, JSON.stringify(entries, null, 2), "utf-8");
+/* ── Write helper: PATCH Edge Config via Vercel API ── */
+async function writeEdgeConfig(
+  items: { operation: string; key: string; value: unknown }[]
+) {
+  const ecId = process.env.EDGE_CONFIG_ID;
+  const token = process.env.VERCEL_API_TOKEN;
+  const teamId = process.env.VERCEL_TEAM_ID;
+
+  const res = await fetch(
+    `https://api.vercel.com/v1/edge-config/${ecId}/items?teamId=${teamId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ items }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Edge Config write failed: ${res.status} ${text}`);
+  }
 }
 
 /* ── POST: Sign up for the waitlist ── */
@@ -58,47 +70,76 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const entries = await readWaitlist();
-    const existing = entries.find((e) => e.email === email);
+    // Check if already signed up
+    const emailKey = `email_${email.replace(/[^a-z0-9]/g, "_")}`;
+    const existingRefCode = await getEdgeConfig().get<string>(emailKey);
 
-    if (existing) {
-      const position = entries.indexOf(existing) + 1;
+    if (existingRefCode) {
+      const entry = await getEdgeConfig().get<WaitlistEntry>(
+        `ref_${existingRefCode}`
+      );
+      const total = (await getEdgeConfig().get<number>("counter")) || 0;
       return NextResponse.json(
         {
           message: "You're already on the list! We'll be in touch soon.",
           alreadyExists: true,
-          position,
-          refCode: existing.refCode,
-          total: entries.length,
+          position: entry?.position || 1,
+          refCode: existingRefCode,
+          total,
         },
         { status: 200 }
       );
     }
 
+    // Get current counter and increment
+    const currentCount = (await getEdgeConfig().get<number>("counter")) || 0;
+    const position = currentCount + 1;
     const refCode = generateRefCode();
+
     const newEntry: WaitlistEntry = {
       email,
       refCode,
       referredBy: ref,
+      position,
       createdAt: new Date().toISOString(),
     };
 
-    entries.push(newEntry);
-    await writeWaitlist(entries);
+    // Batch all writes into a single PATCH (1 write toward the daily limit)
+    const items: { operation: string; key: string; value: unknown }[] = [
+      { operation: "upsert", key: "counter", value: position },
+      { operation: "upsert", key: `ref_${refCode}`, value: newEntry },
+      { operation: "upsert", key: emailKey, value: refCode },
+    ];
 
-    const position = entries.length;
-    console.log(`[Waitlist] New signup: ${email} (ref: ${refCode}, position: #${position})`);
+    // Track referral count if referred
+    if (ref) {
+      const refCountKey = `referrals_${ref}`;
+      const currentRefCount =
+        (await getEdgeConfig().get<number>(refCountKey)) || 0;
+      items.push({
+        operation: "upsert",
+        key: refCountKey,
+        value: currentRefCount + 1,
+      });
+    }
+
+    await writeEdgeConfig(items);
+
+    console.log(
+      `[Waitlist] New signup: ${email} (ref: ${refCode}, position: #${position})`
+    );
 
     return NextResponse.json(
       {
         message: "Welcome to the founding crew!",
         position,
         refCode,
-        total: entries.length,
+        total: position,
       },
       { status: 201 }
     );
-  } catch {
+  } catch (err) {
+    console.error("[Waitlist] POST error:", err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 }
@@ -108,28 +149,37 @@ export async function POST(req: NextRequest) {
 
 /* ── GET: Lookup by ref code, or return total count ── */
 export async function GET(req: NextRequest) {
-  const entries = await readWaitlist();
-  const ref = req.nextUrl.searchParams.get("ref");
+  try {
+    const ref = req.nextUrl.searchParams.get("ref");
 
-  if (ref) {
-    const entry = entries.find((e) => e.refCode === ref);
-    if (!entry) {
-      return NextResponse.json(
-        { error: "Referral code not found." },
-        { status: 404 }
-      );
+    if (ref) {
+      const entry = await getEdgeConfig().get<WaitlistEntry>(`ref_${ref}`);
+      if (!entry) {
+        return NextResponse.json(
+          { error: "Referral code not found." },
+          { status: 404 }
+        );
+      }
+
+      const total = (await getEdgeConfig().get<number>("counter")) || 0;
+      const referralCount =
+        (await getEdgeConfig().get<number>(`referrals_${ref}`)) || 0;
+
+      return NextResponse.json({
+        position: entry.position,
+        total,
+        refCode: entry.refCode,
+        referralCount,
+      });
     }
 
-    const position = entries.indexOf(entry) + 1;
-    const referralCount = entries.filter((e) => e.referredBy === ref).length;
-
-    return NextResponse.json({
-      position,
-      total: entries.length,
-      refCode: entry.refCode,
-      referralCount,
-    });
+    const count = (await getEdgeConfig().get<number>("counter")) || 0;
+    return NextResponse.json({ count });
+  } catch (err) {
+    console.error("[Waitlist] GET error:", err);
+    return NextResponse.json(
+      { error: "Something went wrong." },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ count: entries.length });
 }
