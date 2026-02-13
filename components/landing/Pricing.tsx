@@ -174,8 +174,8 @@ export default function Pricing() {
         <AnimateOnScroll>
           <div className="mt-14 flex justify-center">
             <div
-              className="relative inline-flex items-center gap-4 md:gap-6 px-8 md:px-12 py-4 rounded-full bg-ink text-paper shadow-[0_4px_24px_rgba(13,13,26,0.15)] transition-all duration-500 hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(13,13,26,0.2)] group"
-              style={{ rotate: "-0.8deg" }}
+              className="relative inline-flex items-center gap-4 md:gap-6 px-8 md:px-12 py-4 rounded-full bg-ink text-paper shadow-[0_4px_24px_rgba(13,13,26,0.15)] hover:shadow-[0_12px_36px_rgba(13,13,26,0.2)] group"
+              style={{ animation: "gentle-float 6s ease-in-out infinite" }}
             >
               {/* Founding member label */}
               <span className="text-[10px] md:text-xs font-bold tracking-[0.18em] uppercase text-sage">

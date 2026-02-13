@@ -220,6 +220,13 @@ body {
   background: #43a047;
 }
 
+/* ========== Founding badge float ========== */
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0) rotate(-0.8deg); }
+  33% { transform: translateY(-4px) rotate(0.4deg); }
+  66% { transform: translateY(2px) rotate(-1.2deg); }
+}
+
 /* Dark mockup progress bars */
 .progress-bar-track-dark {
   width: 100%;
