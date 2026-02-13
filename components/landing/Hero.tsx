@@ -122,10 +122,10 @@ export default function Hero() {
   return (
     <section
       id="hero"
-      className="relative bg-cream text-ink overflow-hidden"
+      className="relative bg-cream text-ink"
     >
       <motion.div
-        className="relative z-[2] max-w-[900px] mx-auto px-8 md:px-12 pt-40 md:pt-52 pb-28 md:pb-36 text-center"
+        className="relative z-[2] max-w-[1000px] mx-auto px-8 md:px-12 pt-40 md:pt-52 pb-28 md:pb-36 text-center"
         variants={containerVariants}
         initial="hidden"
         animate="visible"

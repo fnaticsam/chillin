@@ -85,51 +85,33 @@ export default function WaitlistForm() {
   return (
     <div className="w-full max-w-[480px] mx-auto">
       <form onSubmit={handleSubmit} className="relative">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <input
-              ref={inputRef}
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (state === "error") {
-                  setState("idle");
-                  setErrorMsg("");
-                }
-              }}
-              placeholder="your@email.com"
-              className="w-full px-6 py-4 rounded-full bg-white/10 border border-white/15 text-paper placeholder:text-paper/35 text-base outline-none transition-all duration-300 focus:border-sage/50 focus:bg-white/[0.12] focus:shadow-[0_0_0_3px_rgba(74,107,90,0.15)]"
-              disabled={state === "loading"}
-              autoComplete="email"
-            />
-          </div>
+        <div
+          className="inline-flex items-center bg-white rounded-2xl p-2 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-white/20 transition-all duration-500 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+        >
+          <input
+            ref={inputRef}
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (state === "error") {
+                setState("idle");
+                setErrorMsg("");
+              }
+            }}
+            placeholder="your@email.com"
+            className="w-[240px] md:w-[300px] px-5 py-3.5 rounded-xl bg-transparent text-ink placeholder:text-ink/30 text-base focus:outline-none"
+            disabled={state === "loading"}
+            autoComplete="email"
+          />
           <button
             type="submit"
             disabled={state === "loading"}
-            className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-full bg-cream text-ink text-base font-bold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_36px_rgba(243,240,232,0.2)] disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none relative overflow-hidden group whitespace-nowrap"
+            className="flex items-center gap-2 px-7 py-3.5 rounded-xl bg-ink text-paper text-base font-semibold transition-all duration-300 hover:bg-ink/90 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(13,13,26,0.2)] disabled:opacity-60 disabled:hover:translate-y-0 whitespace-nowrap"
           >
             {state === "loading" ? (
               <span className="inline-flex items-center gap-2">
-                <svg
-                  className="animate-spin h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+                <span className="w-4 h-4 border-2 border-paper/30 border-t-paper rounded-full animate-spin" />
                 Joining...
               </span>
             ) : (
@@ -141,17 +123,15 @@ export default function WaitlistForm() {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2.5"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="transition-transform duration-300 group-hover:translate-x-1"
                 >
                   <line x1="5" y1="12" x2="19" y2="12" />
                   <polyline points="12 5 19 12 12 19" />
                 </svg>
               </>
             )}
-            <span className="absolute top-0 -left-full w-[200%] h-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-[left] duration-500 group-hover:left-full" />
           </button>
         </div>
       </form>
