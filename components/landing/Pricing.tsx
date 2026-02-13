@@ -172,9 +172,65 @@ export default function Pricing() {
         </StaggerContainer>
 
         <AnimateOnScroll>
-          <p className="text-center mt-10 text-base text-ink/55 italic">
-            Founding members get 50% off. Locked in. Forever. Yes, really.
-          </p>
+          <div className="flex justify-center mt-14">
+            <div
+              className="relative group cursor-default"
+              style={{ rotate: "-1.5deg" }}
+            >
+              {/* Ticket shape */}
+              <div className="relative bg-ink text-paper rounded-2xl px-10 py-7 shadow-[0_8px_32px_rgba(13,13,26,0.2)] overflow-hidden transition-transform duration-500 group-hover:rotate-0 group-hover:scale-[1.03]">
+                {/* Perforated circles on edges */}
+                <div className="absolute top-1/2 -left-3 w-6 h-6 rounded-full bg-cream -translate-y-1/2" />
+                <div className="absolute top-1/2 -right-3 w-6 h-6 rounded-full bg-cream -translate-y-1/2" />
+
+                {/* Subtle shimmer */}
+                <div
+                  className="absolute inset-0 opacity-[0.07] pointer-events-none"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(255,255,255,0.15) 10px, rgba(255,255,255,0.15) 11px)",
+                  }}
+                />
+
+                <div className="relative flex items-center gap-8">
+                  {/* Left: badge label */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-sage mb-1">
+                      Founding
+                    </span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-sage">
+                      Member
+                    </span>
+                  </div>
+
+                  {/* Dashed divider */}
+                  <div className="w-px h-14 border-l border-dashed border-paper/20" />
+
+                  {/* Right: the deal */}
+                  <div className="text-center">
+                    <div className="font-serif text-4xl md:text-5xl font-extrabold leading-none mb-1.5">
+                      50<span className="text-2xl">%</span>{" "}
+                      <span className="text-sage">OFF</span>
+                    </div>
+                    <div className="text-xs text-paper/50 font-medium tracking-wide">
+                      Locked in. Forever. Yes, really.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating sparkle accents */}
+              <div className="absolute -top-2 -right-2 text-sage text-lg animate-pulse">
+                ✦
+              </div>
+              <div
+                className="absolute -bottom-1 -left-1 text-sage/60 text-sm animate-pulse"
+                style={{ animationDelay: "0.5s" }}
+              >
+                ✦
+              </div>
+            </div>
+          </div>
         </AnimateOnScroll>
       </div>
     </section>
