@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chillin — Your Personal Customer Support Concierge</title>
+<meta name="description" content="Chillin is your personal concierge for every annoying customer support issue. We sit on hold, fight the fights, and get it sorted.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&display=swap" rel="stylesheet">
+<style>
+/* ========== CSS VARIABLES ========== */
+:root {
+  --ink: #0D0D1A;
+  --paper: #FAFAF7;
+  --cream: #F3F0E8;
+  --sage: #4A6B5A;
+  --sage-light: #E8F0EB;
+  --sage-dark: #3A5548;
+  --warm: #C4A882;
+  --coral: #D4654A;
+  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+}
+
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--ink);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+img { max-width: 100%; display: block; }
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* ========== UTILITY ========== */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+.section-desc {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  max-width: 600px;
+  opacity: 0.8;
+}
+.reveal { opacity: 0; transform: translateY(40px); }
+.no-gsap .reveal { opacity: 1; transform: none; }
+.no-gsap .reveal.io-visible { opacity: 1; transform: none; transition: opacity 0.6s ease, transform 0.6s ease; }
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .reveal { opacity: 1; transform: none; }
+  canvas { display: none; }
+}
+
+/* ========== NAVIGATION ========== */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 20px 0;
+  transition: padding 0.4s ease, background 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
+}
+.nav.scrolled {
+  padding: 12px 0;
+  background: rgba(243, 240, 232, 0.82);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 1px 30px rgba(0,0,0,0.08);
+}
+.nav.hidden { transform: translateY(-100%); }
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-logo {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--cream);
+  transition: color 0.4s ease;
+}
+.nav.scrolled .nav-logo { color: var(--ink); }
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  list-style: none;
+}
+.nav-link {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: rgba(250, 250, 247, 0.7);
+  position: relative;
+  transition: color 0.4s ease;
+}
+.nav.scrolled .nav-link { color: rgba(13, 13, 26, 0.65); }
+.nav.scrolled .nav-link:hover { color: var(--ink); }
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--sage);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+.nav-link:hover::after { transform: scaleX(1); }
+.nav-link:hover { color: var(--paper); }
+.nav-cta-btn {
+  padding: 10px 24px;
+  border-radius: 100px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: var(--sage);
+  color: var(--paper);
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+.nav-cta-btn:hover {
+  background: var(--sage-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74, 107, 90, 0.35);
+}
+
+/* ========== WAVE DIVIDERS ========== */
+.wave-divider {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+  overflow: hidden;
+}
+.wave-divider svg {
+  display: block;
+  width: 100%;
+  height: 60px;
+}
+
+/* ========== HERO ========== */
+.hero {
+  position: relative;
+  background: var(--ink);
+  color: var(--cream);
+  padding: 140px 0 80px;
+  overflow: hidden;
+  min-height: 100vh;
+}
+.hero-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.hero .container {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+.hero-left { max-width: 560px; }
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  border-radius: 100px;
+  background: rgba(74, 107, 90, 0.15);
+  border: 1px solid rgba(74, 107, 90, 0.25);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--sage-light);
+  margin-bottom: 28px;
+}
+.hero-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5cb87a;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(92, 184, 122, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(92, 184, 122, 0); }
+}
+.hero-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2.6rem, 5.5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.08;
+  margin-bottom: 24px;
+  color: var(--paper);
+}
+.hero-title em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--sage), #7aad8e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-subtitle {
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: rgba(250, 250, 247, 0.7);
+  margin-bottom: 36px;
+  max-width: 480px;
+}
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  border-radius: 100px;
+  background: var(--sage);
+  color: var(--paper);
+  font-size: 1.05rem;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  margin-bottom: 48px;
+}
+.hero-cta svg { transition: transform 0.3s ease; }
+.hero-cta:hover {
+  background: var(--sage-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(74, 107, 90, 0.4);
+}
+.hero-cta:hover svg { transform: translateX(4px); }
+
+/* Hero Stats */
+.hero-stats {
+  display: flex;
+  gap: 40px;
+}
+.hero-stat-num {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--paper);
+  margin-bottom: 4px;
+}
+.hero-stat-label {
+  font-size: 0.82rem;
+  color: rgba(250, 250, 247, 0.5);
+  font-weight: 500;
+}
+
+/* Company pills ribbon */
+.company-ribbon {
+  position: absolute;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  height: 100px;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.company-pill {
+  position: absolute;
+  padding: 8px 20px;
+  border-radius: 100px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  animation: float-pill 6s ease-in-out infinite;
+}
+@keyframes float-pill {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Phone mockup */
+.hero-right {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1200px;
+}
+.phone-mockup {
+  width: 380px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+  transform: rotateY(-5deg) rotateX(2deg);
+  transition: transform 0.5s ease;
+  color: var(--ink);
+}
+.phone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.phone-header h3 {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.phone-header .active-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--sage-light);
+  color: var(--sage);
+  padding: 4px 12px;
+  border-radius: 100px;
+}
+.issue-card {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--paper);
+  margin-bottom: 12px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.issue-card:last-child { margin-bottom: 0; }
+.issue-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.issue-icon { font-size: 1.1rem; }
+.issue-company {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+.issue-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tag-full { background: var(--sage-light); color: var(--sage); }
+.tag-guided { background: #FFF3E0; color: #E67E22; }
+.status-progress { background: #E3F2FD; color: #1976D2; }
+.status-escalated { background: #FFF3E0; color: #E67E22; }
+.status-resolved { background: var(--sage-light); color: var(--sage-dark); }
+.issue-desc {
+  font-size: 0.8rem;
+  color: rgba(13, 13, 26, 0.65);
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+.issue-meta {
+  font-size: 0.72rem;
+  color: rgba(13, 13, 26, 0.45);
+  margin-bottom: 8px;
+}
+.progress-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.5s ease;
+}
+.fill-sage { background: var(--sage); }
+.fill-orange { background: #E67E22; }
+.fill-green { background: #43A047; }
+
+/* ========== PROBLEM SECTION ========== */
+.problem-section {
+  position: relative;
+  background: var(--cream);
+  color: var(--ink);
+  padding: 100px 0;
+  overflow: hidden;
+}
+.problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin-top: 48px;
+}
+.pain-card {
+  padding: 24px;
+  border-left: 3px solid var(--coral);
+  background: rgba(255,255,255,0.5);
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 20px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.pain-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+.pain-card h4 {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.pain-card p {
+  font-size: 0.92rem;
+  color: rgba(13, 13, 26, 0.65);
+  line-height: 1.6;
+}
+.problem-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-content: start;
+}
+.problem-stat {
+  padding: 32px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 16px;
+  text-align: center;
+  border: 1px solid rgba(0,0,0,0.04);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.problem-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+.problem-stat-num {
+  font-family: var(--font-serif);
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--coral);
+  margin-bottom: 6px;
+}
+.problem-stat-label {
+  font-size: 0.85rem;
+  color: rgba(13, 13, 26, 0.55);
+  line-height: 1.4;
+}
+
+/* Hold music floating text */
+.hold-music-svg {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+.hold-music-svg text {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  fill: var(--coral);
+  font-style: italic;
+}
+
+/* ========== PULL QUOTE ========== */
+.pullquote-section {
+  position: relative;
+  background: var(--ink);
+  color: var(--cream);
+  padding: 120px 0;
+  overflow: hidden;
+  text-align: center;
+}
+.pullquote-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 107, 90, 0.2), transparent 70%);
+  animation: glow-pulse 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes glow-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+}
+.pullquote-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  font-family: var(--font-serif);
+  font-size: 20rem;
+  color: rgba(74, 107, 90, 0.06);
+  line-height: 1;
+  pointer-events: none;
+  z-index: 0;
+}
+.pullquote-text {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.35;
+  max-width: 800px;
+  margin: 0 auto 24px;
+  font-style: italic;
+}
+.pullquote-text .word {
+  display: inline-block;
+  opacity: 0.15;
+  transition: opacity 0.1s ease;
+  margin-right: 0.25em;
+}
+.pullquote-attr {
+  position: relative;
+  z-index: 1;
+  font-size: 0.95rem;
+  color: rgba(250, 250, 247, 0.45);
+  font-weight: 500;
+}
+
+/* ========== HOW IT WORKS ========== */
+.how-section {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 100px 0;
+}
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  margin-top: 56px;
+  position: relative;
+}
+.steps-line {
+  position: absolute;
+  top: 42px;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sage-light), var(--sage), var(--sage-light));
+  z-index: 0;
+  opacity: 0.4;
+}
+.step-card {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 32px 20px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(0,0,0,0.04);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.step-card[data-tilt] { cursor: default; }
+.step-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.08);
+}
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--sage);
+  color: var(--paper);
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 auto 20px;
+  transition: box-shadow 0.3s ease;
+}
+.step-card:hover .step-num {
+  box-shadow: 0 0 24px rgba(196, 168, 130, 0.5);
+}
+.step-card h4 {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.step-card p {
+  font-size: 0.9rem;
+  color: rgba(13, 13, 26, 0.6);
+  line-height: 1.6;
+}
+
+/* ========== WHAT WE HANDLE ========== */
+.coverage-section {
+  position: relative;
+  background: var(--ink);
+  color: var(--cream);
+  padding: 100px 0;
+  overflow: hidden;
+}
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  margin-top: 56px;
+}
+.tier-card {
+  padding: 36px 28px;
+  border-radius: 20px;
+  background: rgba(250, 250, 247, 0.04);
+  border: 1px solid rgba(250, 250, 247, 0.08);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, border-color 0.4s ease, box-shadow 0.3s ease;
+}
+.tier-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+}
+.tier-card[data-tier="full"]:hover { border-color: var(--sage); }
+.tier-card[data-tier="guided"]:hover { border-color: #E67E22; }
+.tier-card[data-tier="advisory"]:hover { border-color: #9B59B6; }
+.tier-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.tier-badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+.badge-sage { background: rgba(74, 107, 90, 0.25); color: #7aad8e; }
+.badge-orange { background: rgba(230, 126, 34, 0.2); color: #F0A060; }
+.badge-purple { background: rgba(155, 89, 182, 0.2); color: #C39BD3; }
+.tier-card h3 {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--paper);
+}
+.tier-card > p {
+  font-size: 0.9rem;
+  color: rgba(250, 250, 247, 0.55);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.tier-items {
+  list-style: none;
+}
+.tier-items li {
+  font-size: 0.88rem;
+  color: rgba(250, 250, 247, 0.7);
+  padding: 7px 0;
+  border-top: 1px solid rgba(250, 250, 247, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tier-items li::before {
+  content: '  ';
+  flex-shrink: 0;
+}
+
+/* ========== MOAT ========== */
+.moat-section {
+  position: relative;
+  background: var(--cream);
+  color: var(--ink);
+  padding: 100px 0;
+}
+.moat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin-top: 56px;
+}
+.moat-card {
+  padding: 36px 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.moat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+}
+.moat-card[data-tilt] { cursor: default; }
+.moat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--sage-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: var(--sage);
+}
+.moat-icon svg { width: 24px; height: 24px; }
+.moat-card h4 {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.moat-card p {
+  font-size: 0.92rem;
+  color: rgba(13, 13, 26, 0.6);
+  line-height: 1.65;
+}
+
+/* ========== APP PREVIEW (dark bg) ========== */
+.comparison-section {
+  position: relative;
+  background: var(--ink);
+  color: var(--cream);
+  padding: 100px 0;
+  overflow: hidden;
+}
+.app-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+  margin-top: 56px;
+}
+.app-features-dark { display: flex; flex-direction: column; gap: 24px; }
+.app-feature-dark {
+  display: flex; gap: 16px; padding: 20px 24px;
+  border-radius: 16px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-feature-dark:hover {
+  background: rgba(255,255,255,0.04);
+  transform: translateX(6px);
+}
+.app-feature-icon-dark {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(74,107,90,0.2); display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.3s;
+}
+.app-feature-dark:hover .app-feature-icon-dark {
+  box-shadow: 0 0 16px rgba(74,107,90,0.25);
+}
+.app-feature-icon-dark svg { color: var(--sage); }
+.app-feature-dark h4 { font-size: 16px; font-weight: 600; color: var(--paper); margin-bottom: 4px; }
+.app-feature-dark p { font-size: 14px; line-height: 1.5; color: rgba(250,250,247,0.55); }
+
+.app-mockup-dark {
+  background: rgba(255,255,255,0.04); border-radius: 32px; padding: 32px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  will-change: transform;
+}
+.mockup-header-dark {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.mockup-title-dark { font-weight: 700; font-size: 18px; color: var(--paper); }
+.mockup-badge-dark {
+  font-size: 12px; font-weight: 600; padding: 6px 14px;
+  border-radius: 100px; background: rgba(255,243,224,0.15); color: #FFB74D;
+}
+.mockup-issue-dark {
+  padding: 20px; border-radius: 16px; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06); margin-bottom: 16px;
+  transition: all 0.3s;
+}
+.mockup-issue-dark:hover {
+  border-color: rgba(74,107,90,0.2);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.mockup-issue-top-dark {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+}
+.mockup-company-dark { font-weight: 600; font-size: 15px; color: var(--paper); }
+.mockup-status-dark {
+  font-size: 11px; font-weight: 600; padding: 4px 12px;
+  border-radius: 100px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.status-active-dark { background: rgba(74,107,90,0.2); color: #7aad8e; }
+.status-escalated-dark { background: rgba(21,101,192,0.15); color: #64B5F6; }
+.status-resolved-dark { background: rgba(46,125,50,0.15); color: #81C784; }
+.mockup-desc-dark { font-size: 14px; color: rgba(250,250,247,0.5); margin-bottom: 10px; }
+.mockup-meta-dark { font-size: 12px; color: rgba(250,250,247,0.35); margin-bottom: 12px; }
+.mockup-tier-tag-dark {
+  display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 100px; margin-left: 8px; vertical-align: middle;
+}
+.tag-full-dark { background: rgba(74,107,90,0.2); color: #7aad8e; }
+.tag-guided-dark { background: rgba(255,243,224,0.12); color: #FFB74D; }
+
+/* ========== PRICING ========== */
+.pricing-section {
+  position: relative;
+  background: var(--cream);
+  color: var(--ink);
+  padding: 100px 0;
+  overflow: hidden;
+}
+.pricing-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(74, 107, 90, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(196, 168, 130, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(74, 107, 90, 0.04) 0%, transparent 60%);
+  z-index: 0;
+}
+.pricing-section .container { position: relative; z-index: 1; }
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  margin-top: 56px;
+}
+.pricing-card {
+  padding: 40px 28px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08);
+}
+.pricing-card.featured {
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+.pricing-card.featured::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 26px;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--sage), var(--sage-light), var(--sage), var(--sage-dark));
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-glow 4s ease-in-out infinite;
+  z-index: -1;
+}
+@keyframes border-glow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.pricing-popular {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 20px;
+  border-radius: 100px;
+  background: var(--sage);
+  color: var(--paper);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pricing-card h3 {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  margin-top: 8px;
+}
+.pricing-price {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+.pricing-price .currency { font-size: 1.6rem; vertical-align: top; line-height: 1.6; }
+.pricing-price .period { font-size: 1rem; font-weight: 400; color: rgba(13, 13, 26, 0.45); }
+.pricing-tagline {
+  font-size: 0.9rem;
+  color: rgba(13, 13, 26, 0.55);
+  margin-bottom: 28px;
+}
+.pricing-features {
+  list-style: none;
+  text-align: left;
+  margin-bottom: 32px;
+}
+.pricing-features li {
+  font-size: 0.9rem;
+  padding: 8px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(13, 13, 26, 0.7);
+}
+.pricing-features li::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sage-light);
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A6B5A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
+}
+.pricing-btn {
+  display: inline-block;
+  padding: 14px 36px;
+  border-radius: 100px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: var(--ink);
+  color: var(--paper);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  width: 100%;
+}
+.pricing-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(13, 13, 26, 0.2);
+}
+.pricing-card.featured .pricing-btn {
+  background: var(--sage);
+}
+.pricing-card.featured .pricing-btn:hover {
+  background: var(--sage-dark);
+  box-shadow: 0 8px 24px rgba(74, 107, 90, 0.35);
+}
+.pricing-note {
+  text-align: center;
+  margin-top: 36px;
+  font-size: 0.95rem;
+  color: rgba(13, 13, 26, 0.55);
+  font-style: italic;
+}
+
+/* ========== FINAL CTA ========== */
+.cta-section {
+  position: relative;
+  background: var(--ink);
+  color: var(--cream);
+  padding: 140px 0;
+  overflow: hidden;
+  text-align: center;
+}
+.cta-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 107, 90, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.cta-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.cta-section .container { position: relative; z-index: 1; }
+.cta-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  color: var(--paper);
+  text-shadow: 0 0 60px rgba(74, 107, 90, 0.25);
+}
+.cta-desc {
+  font-size: 1.15rem;
+  color: rgba(250, 250, 247, 0.6);
+  max-width: 500px;
+  margin: 0 auto 40px;
+  line-height: 1.7;
+}
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 44px;
+  border-radius: 100px;
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 700;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.cta-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.5s ease;
+}
+.cta-btn:hover::after { left: 100%; }
+.cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 36px rgba(243, 240, 232, 0.2);
+}
+.cta-btn svg { transition: transform 0.3s ease; }
+.cta-btn:hover svg { transform: translateX(4px); }
+
+/* ========== FOOTER ========== */
+.footer {
+  background: var(--ink);
+  color: rgba(250, 250, 247, 0.35);
+  padding: 32px 0;
+  text-align: center;
+  font-size: 0.85rem;
+  border-top: 1px solid rgba(250, 250, 247, 0.06);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 900px) {
+  .hero .container { grid-template-columns: 1fr; text-align: center; }
+  .hero-left { max-width: 100%; margin: 0 auto; }
+  .hero-subtitle { margin: 0 auto 36px; }
+  .hero-stats { justify-content: center; }
+  .hero-right { margin-top: 40px; }
+  .phone-mockup { transform: none; width: 100%; max-width: 380px; }
+  .company-ribbon { display: none; }
+  .nav-links .nav-link { display: none; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: repeat(2, 1fr); }
+  .steps-line { display: none; }
+  .tier-grid { grid-template-columns: 1fr; max-width: 440px; margin-left: auto; margin-right: auto; }
+  .moat-grid { grid-template-columns: 1fr; max-width: 440px; margin-left: auto; margin-right: auto; }
+  .app-grid { grid-template-columns: 1fr; gap: 48px; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
+  .hero-canvas, .cta-canvas { display: none; }
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 120px 0 60px; min-height: auto; }
+  .hero-title { font-size: 2.2rem; }
+  .hero-stats { flex-direction: column; gap: 20px; align-items: center; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .pricing-grid { margin-top: 40px; }
+  .section-title { font-size: 1.8rem; }
+  .pullquote-text { font-size: 1.5rem; }
+  .cta-title { font-size: 2.2rem; }
+  .problem-section, .how-section, .coverage-section, .moat-section, .comparison-section, .pricing-section {
+    padding: 60px 0;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== NAVIGATION ========== -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">chillin</a>
+    <ul class="nav-links">
+      <li><a href="#how" class="nav-link">How it works</a></li>
+      <li><a href="#coverage" class="nav-link">What we handle</a></li>
+      <li><a href="#pricing" class="nav-link">Pricing</a></li>
+      <li><a href="#waitlist" class="nav-cta-btn">Join the waitlist</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ========== HERO ========== -->
+<section class="hero" id="hero">
+  <canvas class="hero-canvas" id="heroCanvas"></canvas>
+
+  <div class="container">
+    <div class="hero-left">
+      <div class="hero-badge reveal">
+        <span class="dot"></span>
+        Life's too short for hold music
+      </div>
+      <h1 class="hero-title reveal">Someone else can sit on hold <em>for once</em></h1>
+      <p class="hero-subtitle reveal">Tell us the problem. A real human picks it up, fights the fight, and gets it sorted. You never speak to a call centre again.</p>
+      <a href="#waitlist" class="hero-cta magnetic-btn reveal">
+        Join the waitlist
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <div class="hero-stats reveal">
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span class="counter" data-count="47">0</span> min</div>
+          <div class="hero-stat-label">Avg hold time you skip</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span class="counter" data-count="89">0</span>%</div>
+          <div class="hero-stat-label">Issues fully resolved</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span class="counter" data-count="4.9" data-decimal="true">0</span>&#9733;</div>
+          <div class="hero-stat-label">From people who chill now</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right reveal">
+      <div class="phone-mockup" data-tilt>
+        <div class="phone-header">
+          <h3>Your Issues</h3>
+          <span class="active-badge">2 Active</span>
+        </div>
+        <div class="issue-card">
+          <div class="issue-top">
+            <span class="issue-icon">&#9992;&#65039;</span>
+            <span class="issue-company">British Airways</span>
+            <span class="issue-tag tag-full">Full Resolution</span>
+            <span class="issue-tag status-progress">In Progress</span>
+          </div>
+          <div class="issue-desc">EU261 compensation claim — flight BA287 cancelled 14 Jan</div>
+          <div class="issue-meta">Avg resolution: 12 days &bull; Day 4 of 12</div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill fill-sage" data-width="35" style="width:0"></div>
+          </div>
+        </div>
+        <div class="issue-card">
+          <div class="issue-top">
+            <span class="issue-icon">&#127974;</span>
+            <span class="issue-company">Barclays</span>
+            <span class="issue-tag tag-guided">Guided</span>
+            <span class="issue-tag status-escalated">Escalated</span>
+          </div>
+          <div class="issue-desc">Disputed charge &pound;247.00 — merchant not responding</div>
+          <div class="issue-meta">Avg resolution: 8 days &bull; Chargeback filed</div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill fill-orange" data-width="60" style="width:0"></div>
+          </div>
+        </div>
+        <div class="issue-card">
+          <div class="issue-top">
+            <span class="issue-icon">&#128230;</span>
+            <span class="issue-company">Amazon</span>
+            <span class="issue-tag tag-full">Full Resolution</span>
+            <span class="issue-tag status-resolved">Resolved &#10003;</span>
+          </div>
+          <div class="issue-desc">Missing item from order — full refund secured</div>
+          <div class="issue-meta">Resolved in 2 hours &bull; &pound;89.99 refunded</div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill fill-green" data-width="100" style="width:0"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Company pill ribbon -->
+  <div class="company-ribbon" aria-hidden="true">
+    <div class="company-pill" style="left:2%; top:30px; background:rgba(74,107,90,0.15); color:rgba(122,173,142,0.7); animation-delay:0s;">BT</div>
+    <div class="company-pill" style="left:14%; top:55px; background:rgba(196,168,130,0.12); color:rgba(196,168,130,0.7); animation-delay:0.5s;">Sky</div>
+    <div class="company-pill" style="left:26%; top:25px; background:rgba(74,107,90,0.15); color:rgba(122,173,142,0.7); animation-delay:1s;">BA</div>
+    <div class="company-pill" style="left:38%; top:60px; background:rgba(196,168,130,0.12); color:rgba(196,168,130,0.7); animation-delay:1.5s;">Amazon</div>
+    <div class="company-pill" style="left:52%; top:20px; background:rgba(74,107,90,0.15); color:rgba(122,173,142,0.7); animation-delay:2s;">EE</div>
+    <div class="company-pill" style="left:64%; top:55px; background:rgba(196,168,130,0.12); color:rgba(196,168,130,0.7); animation-delay:2.5s;">Thames Water</div>
+    <div class="company-pill" style="left:78%; top:30px; background:rgba(74,107,90,0.15); color:rgba(122,173,142,0.7); animation-delay:3s;">Vodafone</div>
+    <div class="company-pill" style="left:90%; top:50px; background:rgba(196,168,130,0.12); color:rgba(196,168,130,0.7); animation-delay:3.5s;">HMRC</div>
+  </div>
+</section>
+
+<!-- Wave: dark → cream -->
+<div class="wave-divider" style="background:var(--ink);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,40 C360,0 720,60 1080,20 C1260,0 1380,30 1440,10 L1440,60 L0,60Z" fill="var(--cream)"/></svg>
+</div>
+
+<!-- ========== PROBLEM SECTION ========== -->
+<section class="problem-section" id="problem">
+  <div class="container">
+    <div class="section-label reveal" style="color:var(--coral);">The Problem</div>
+    <h2 class="section-title reveal">Customer support was built to make you quit</h2>
+    <p class="section-desc reveal">Every chatbot, every phone tree, every "your call is important to us" — designed to waste your time until you give up. It works.</p>
+
+    <div class="problem-grid">
+      <div class="problem-cards">
+        <div class="pain-card reveal">
+          <h4>45 minutes. Wrong department.</h4>
+          <p>Transferred. Disconnected. Start again. This is the system working exactly as intended.</p>
+        </div>
+        <div class="pain-card reveal">
+          <h4>"Can you explain the issue again?"</h4>
+          <p>Every. Single. Agent. Nobody reads the notes. Nobody owns the problem. You are case #4,891.</p>
+        </div>
+        <div class="pain-card reveal">
+          <h4>Radio silence</h4>
+          <p>Is someone working on this? When will it be fixed? Nobody knows. Nobody tells you. You just… wait.</p>
+        </div>
+        <div class="pain-card reveal">
+          <h4>You accept less than you deserve</h4>
+          <p>Partial refund. Store credit. "Sorry, that's our policy." You take the bad deal because fighting it costs more than it's worth.</p>
+        </div>
+      </div>
+      <div class="problem-stats">
+        <div class="problem-stat reveal">
+          <div class="problem-stat-num"><span class="counter" data-count="20" data-suffix="hrs">0</span></div>
+          <div class="problem-stat-label">per year on hold. That's nearly a full day.</div>
+        </div>
+        <div class="problem-stat reveal">
+          <div class="problem-stat-num"><span class="counter" data-count="67" data-suffix="%">0</span></div>
+          <div class="problem-stat-label">give up before getting a resolution</div>
+        </div>
+        <div class="problem-stat reveal">
+          <div class="problem-stat-num"><span class="counter" data-count="4.2" data-suffix="x" data-decimal="true">0</span></div>
+          <div class="problem-stat-label">transferred before anyone helps</div>
+        </div>
+        <div class="problem-stat reveal">
+          <div class="problem-stat-num"><span class="counter" data-count="340" data-prefix="&pound;">0</span></div>
+          <div class="problem-stat-label">lost per household. Every year.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hold music curved text -->
+  <svg class="hold-music-svg" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <path id="holdCurve1" d="M-100,50 C200,20 400,70 700,35 C1000,0 1200,60 1540,30"/>
+      <path id="holdCurve2" d="M-100,30 C300,60 600,10 900,50 C1200,80 1350,20 1540,45"/>
+    </defs>
+    <text><textPath href="#holdCurve1" startOffset="0%">your call is important to us &bull; please hold &bull; your call is important to us &bull; please hold &bull; your call is important to us</textPath></text>
+    <text><textPath href="#holdCurve2" startOffset="10%">I'll need to transfer you &bull; please hold &bull; I'll need to transfer you &bull; please hold &bull; I'll need to transfer you</textPath></text>
+  </svg>
+</section>
+
+<!-- Wave: cream → dark -->
+<div class="wave-divider" style="background:var(--cream);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,20 C240,60 480,0 720,40 C960,70 1200,10 1440,30 L1440,60 L0,60Z" fill="var(--ink)"/></svg>
+</div>
+
+<!-- ========== PULL QUOTE ========== -->
+<section class="pullquote-section" id="pullquote">
+  <div class="pullquote-glow"></div>
+  <div class="pullquote-mark" aria-hidden="true">&ldquo;</div>
+  <div class="container">
+    <p class="pullquote-text" id="pullquoteText">There's not a problem that I can't fix, cause I can do it in the mix</p>
+    <p class="pullquote-attr reveal">Ini Kamoze — Here Comes the Hotstepper</p>
+  </div>
+</section>
+
+<!-- Wave: dark → paper -->
+<div class="wave-divider" style="background:var(--ink);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C180,60 360,0 540,40 C720,70 900,10 1080,45 C1260,70 1380,20 1440,35 L1440,60 L0,60Z" fill="var(--paper)"/></svg>
+</div>
+
+<!-- ========== HOW IT WORKS ========== -->
+<section class="how-section" id="how">
+  <div class="container">
+    <div style="text-align:center; max-width:600px; margin:0 auto 0;">
+      <div class="section-label reveal" style="color:var(--sage);">How It Works</div>
+      <h2 class="section-title reveal">One message from you. We handle the rest.</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="steps-line" aria-hidden="true"></div>
+      <div class="step-card reveal" data-tilt>
+        <div class="step-num">01</div>
+        <h4>Vent</h4>
+        <p>Open the app. Speak or type. Rant if you need to. A real human concierge picks it up and comes back with a plan.</p>
+      </div>
+      <div class="step-card reveal" data-tilt>
+        <div class="step-num">02</div>
+        <h4>We take the call</h4>
+        <p>Your concierge calls the company, navigates the phone tree, sits through the hold music, and does the bit that makes normal people cry.</p>
+      </div>
+      <div class="step-card reveal" data-tilt>
+        <div class="step-num">03</div>
+        <h4>Watch it move</h4>
+        <p>Live updates in the app. You'll know more about your case than the company does. Zero chasing required.</p>
+      </div>
+      <div class="step-card reveal" data-tilt>
+        <div class="step-num">04</div>
+        <h4>Done</h4>
+        <p>Resolved, refunded, or escalated to the ombudsman. We know every route. We don't stop until it's sorted.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Wave: paper → dark -->
+<div class="wave-divider" style="background:var(--paper);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,40 C300,10 600,50 900,20 C1100,0 1300,40 1440,25 L1440,60 L0,60Z" fill="var(--ink)"/></svg>
+</div>
+
+<!-- ========== WHAT WE HANDLE ========== -->
+<section class="coverage-section" id="coverage">
+  <div class="container">
+    <div class="section-label reveal" style="color:var(--warm);">What We Handle</div>
+    <h2 class="section-title reveal" style="color:var(--paper);">If it makes you angry, we probably cover it</h2>
+    <p class="section-desc reveal" style="color:rgba(250,250,247,0.6);">We're legally authorised to act on your behalf. Same framework solicitors use. Except we don't bill you £300 an hour and we actually answer the phone.</p>
+
+    <div class="tier-grid">
+      <div class="tier-card reveal" data-tier="full">
+        <div class="tier-badge badge-sage">Full Resolution</div>
+        <h3>You do nothing</h3>
+        <p>Submit it, forget it. We handle everything from first call to final resolution. You don't lift a finger.</p>
+        <ul class="tier-items">
+          <li>Telecom billing &amp; cancellations</li>
+          <li>Energy complaints &amp; switches</li>
+          <li>Flight compensation (EU261)</li>
+          <li>Insurance claims chasing</li>
+          <li>Retail refunds &amp; delivery issues</li>
+          <li>Council tax &amp; parking appeals</li>
+          <li>Subscription cancellations</li>
+        </ul>
+      </div>
+      <div class="tier-card reveal" data-tier="guided">
+        <div class="tier-badge badge-orange">Guided Resolution</div>
+        <h3>2 minutes from you, tops</h3>
+        <p>We do all the work. You tap one button when your bank needs a security code. That's it.</p>
+        <ul class="tier-items">
+          <li>Banking complaints &amp; disputes</li>
+          <li>Mortgage &amp; loan issues</li>
+          <li>NHS &amp; GP access complaints</li>
+          <li>HMRC queries (Form 64-8)</li>
+        </ul>
+      </div>
+      <div class="tier-card reveal" data-tier="advisory">
+        <div class="tier-badge badge-purple">Advisory + Hold-for-Me</div>
+        <h3>We skip the queue for you</h3>
+        <p>We sit on hold, get the right person on the line, then hand you the phone with a script. You walk in prepared.</p>
+        <ul class="tier-items">
+          <li>Court &amp; legal proceedings</li>
+          <li>Benefits &amp; DWP appeals</li>
+          <li>Visa &amp; immigration matters</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Wave: dark → cream -->
+<div class="wave-divider" style="background:var(--ink);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,20 C360,55 720,5 1080,40 C1260,55 1380,15 1440,30 L1440,60 L0,60Z" fill="var(--cream)"/></svg>
+</div>
+
+<!-- ========== MOAT ========== -->
+<section class="moat-section" id="moat">
+  <div class="container">
+    <div style="text-align:center; max-width:600px; margin:0 auto 0;">
+      <div class="section-label reveal" style="color:var(--sage);">Why It Works</div>
+      <h2 class="section-title reveal">This isn't a chatbot. It's a system.</h2>
+    </div>
+    <div class="moat-grid">
+      <div class="moat-card reveal" data-tilt>
+        <div class="moat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h4>Legally authorised</h4>
+        <p>You sign once. After that, companies are legally required to deal with us as if we're you. No loopholes, no runaround.</p>
+      </div>
+      <div class="moat-card reveal" data-tilt>
+        <div class="moat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h4>We've seen this before</h4>
+        <p>Every case makes us smarter. We know which number to call, which department actually helps, and what to say to skip three weeks of back-and-forth.</p>
+      </div>
+      <div class="moat-card reveal" data-tilt>
+        <div class="moat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h4>Companies know us</h4>
+        <p>As we grow, companies give us priority access. Faster queues, direct escalation paths, dedicated contacts. Your issue moves quicker because we've been here before.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Wave: cream → dark -->
+<div class="wave-divider" style="background:var(--cream);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,35 C200,5 400,55 600,25 C800,0 1000,50 1200,20 C1350,0 1420,40 1440,30 L1440,60 L0,60Z" fill="var(--ink)"/></svg>
+</div>
+
+<!-- ========== APP PREVIEW ========== -->
+<section class="comparison-section" id="app">
+  <div class="container">
+    <div class="section-label reveal" style="color:var(--warm);">The App</div>
+    <h2 class="section-title reveal" style="color:var(--paper);">You'll know more than the company does</h2>
+    <p class="section-desc reveal" style="color:rgba(250,250,247,0.6);">Real-time status. Resolution benchmarks. Full transparency. The support experience you always deserved.</p>
+
+    <div class="app-grid">
+      <div class="app-features-dark">
+        <div class="app-feature-dark reveal">
+          <div class="app-feature-icon-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div>
+            <h4>Live tracking</h4>
+            <p>Every step visible. Submitted, in progress, escalated, resolved. No more guessing.</p>
+          </div>
+        </div>
+        <div class="app-feature-dark reveal">
+          <div class="app-feature-icon-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+          </div>
+          <div>
+            <h4>Company intel</h4>
+            <p>Average resolution times. Success rates. Best contact routes. We show you what to expect before you even start.</p>
+          </div>
+        </div>
+        <div class="app-feature-dark reveal">
+          <div class="app-feature-icon-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <h4>No surprises</h4>
+            <p>Before you submit, you see exactly how we'll handle it. Full resolution, guided, or advisory. Straight up.</p>
+          </div>
+        </div>
+        <div class="app-feature-dark reveal">
+          <div class="app-feature-icon-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div>
+            <h4>Receipts</h4>
+            <p>What was the outcome? How much did we recover? Everything documented. Your money back, with proof.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOCKUP -->
+      <div class="app-mockup-dark reveal" data-tilt>
+        <div class="mockup-header-dark">
+          <div class="mockup-title-dark">Your Issues</div>
+          <div class="mockup-badge-dark">2 Active</div>
+        </div>
+        <div class="mockup-issue-dark">
+          <div class="mockup-issue-top-dark">
+            <div class="mockup-company-dark">&#9992;&#65039; British Airways <span class="mockup-tier-tag-dark tag-full-dark">Full Resolution</span></div>
+            <div class="mockup-status-dark status-active-dark">In Progress</div>
+          </div>
+          <div class="mockup-desc-dark">EU261 compensation claim — flight BA287 cancelled 14 Jan</div>
+          <div class="mockup-meta-dark">Avg resolution: 12 days &bull; Day 4 of 12</div>
+          <div class="progress-bar-track"><div class="progress-bar-fill fill-sage" data-width="35" style="width:0"></div></div>
+        </div>
+        <div class="mockup-issue-dark">
+          <div class="mockup-issue-top-dark">
+            <div class="mockup-company-dark">&#127974; Barclays <span class="mockup-tier-tag-dark tag-guided-dark">Guided</span></div>
+            <div class="mockup-status-dark status-escalated-dark">Escalated</div>
+          </div>
+          <div class="mockup-desc-dark">Disputed charge &pound;247.00 — merchant not responding</div>
+          <div class="mockup-meta-dark">Avg resolution: 8 days &bull; Chargeback filed</div>
+          <div class="progress-bar-track"><div class="progress-bar-fill fill-orange" data-width="60" style="width:0"></div></div>
+        </div>
+        <div class="mockup-issue-dark">
+          <div class="mockup-issue-top-dark">
+            <div class="mockup-company-dark">&#128230; Amazon <span class="mockup-tier-tag-dark tag-full-dark">Full Resolution</span></div>
+            <div class="mockup-status-dark status-resolved-dark">Resolved &#10003;</div>
+          </div>
+          <div class="mockup-desc-dark">Missing item from order — full refund secured</div>
+          <div class="mockup-meta-dark">Resolved in 2 hours &bull; &pound;89.99 refunded</div>
+          <div class="progress-bar-track"><div class="progress-bar-fill fill-green" data-width="100" style="width:0"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Wave: dark → cream -->
+<div class="wave-divider" style="background:var(--ink);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,25 C240,55 480,10 720,40 C960,65 1200,15 1440,35 L1440,60 L0,60Z" fill="var(--cream)"/></svg>
+</div>
+
+<!-- ========== PRICING ========== -->
+<section class="pricing-section" id="pricing">
+  <div class="pricing-mesh" aria-hidden="true"></div>
+  <div class="container">
+    <div style="text-align:center; max-width:600px; margin:0 auto 0;">
+      <div class="section-label reveal" style="color:var(--sage);">Pricing</div>
+      <h2 class="section-title reveal">What's your time actually worth?</h2>
+      <p class="section-desc reveal" style="margin:0 auto 0;">One hour on hold with your bank costs more than a month of Chillin. Just saying.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card reveal" data-tilt>
+        <h3>Member</h3>
+        <div class="pricing-price"><span class="currency">&pound;</span><span class="counter" data-count="49">0</span><span class="period">/month</span></div>
+        <p class="pricing-tagline">A few issues a month. We sort them all.</p>
+        <ul class="pricing-features">
+          <li>Up to 3 issues per month</li>
+          <li>Full app access &amp; tracking</li>
+          <li>Company benchmarks &amp; guides</li>
+          <li>Letter of Authority included</li>
+        </ul>
+        <a href="#waitlist" class="pricing-btn">Get started</a>
+      </div>
+      <div class="pricing-card featured reveal" data-tilt>
+        <div class="pricing-popular">Most Popular</div>
+        <h3>Premium</h3>
+        <div class="pricing-price"><span class="currency">&pound;</span><span class="counter" data-count="99">0</span><span class="period">/month</span></div>
+        <p class="pricing-tagline">Unlimited issues. Zero hold music. Ever.</p>
+        <ul class="pricing-features">
+          <li>Unlimited issues</li>
+          <li>Priority concierge queue</li>
+          <li>Hold-for-Me on all Tier 2 cases</li>
+          <li>Proactive issue monitoring</li>
+        </ul>
+        <a href="#waitlist" class="pricing-btn">Get started</a>
+      </div>
+      <div class="pricing-card reveal" data-tilt>
+        <h3>Household</h3>
+        <div class="pricing-price"><span class="currency">&pound;</span><span class="counter" data-count="149">0</span><span class="period">/month</span></div>
+        <p class="pricing-tagline">The whole family, sorted. One dedicated concierge.</p>
+        <ul class="pricing-features">
+          <li>Up to 4 household members</li>
+          <li>Unlimited issues per member</li>
+          <li>Dedicated concierge</li>
+          <li>Everything in Premium</li>
+        </ul>
+        <a href="#waitlist" class="pricing-btn">Get started</a>
+      </div>
+    </div>
+    <p class="pricing-note reveal">Founding members get 50% off. Locked in. Forever. Yes, really.</p>
+  </div>
+</section>
+
+<!-- Wave: cream → dark -->
+<div class="wave-divider" style="background:var(--cream);">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C360,0 720,55 1080,15 C1260,0 1380,40 1440,25 L1440,60 L0,60Z" fill="var(--ink)"/></svg>
+</div>
+
+<!-- ========== FINAL CTA ========== -->
+<section class="cta-section" id="waitlist">
+  <div class="cta-glow" aria-hidden="true"></div>
+  <canvas class="cta-canvas" id="ctaCanvas"></canvas>
+  <div class="container">
+    <h2 class="cta-title reveal">We handle it. You chill.</h2>
+    <p class="cta-desc reveal">Founding members get 50% off for life. Seriously. Go do something you actually enjoy.</p>
+    <a href="#" class="cta-btn magnetic-btn reveal">
+      Join the waitlist
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="container">
+    <p>&copy; 2026 Chillin. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- ========== SCRIPTS ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ========== REDUCED MOTION CHECK ==========
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ========== GSAP AVAILABILITY ==========
+  const hasGSAP = typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined';
+  if (!hasGSAP) {
+    document.body.classList.add('no-gsap');
+  }
+
+  // ========== NAVIGATION ==========
+  const nav = document.getElementById('nav');
+  let lastScroll = 0;
+  let scrollDelta = 0;
+  const navThreshold = 80;
+  const hideThreshold = 8;
+
+  function handleNavScroll() {
+    const y = window.scrollY;
+    // Scrolled styling
+    if (y > navThreshold) {
+      nav.classList.add('scrolled');
+    } else {
+      nav.classList.remove('scrolled');
+    }
+    // Hide/show on scroll direction
+    scrollDelta = y - lastScroll;
+    if (scrollDelta > hideThreshold && y > 200) {
+      nav.classList.add('hidden');
+    } else if (scrollDelta < -hideThreshold) {
+      nav.classList.remove('hidden');
+    }
+    lastScroll = y;
+  }
+  window.addEventListener('scroll', handleNavScroll, { passive: true });
+
+  // ========== COUNTER ANIMATION ==========
+  function easeOutExpo(t) {
+    return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+  }
+
+  function animateCounter(el) {
+    if (el.dataset.animated) return;
+    el.dataset.animated = 'true';
+    const target = parseFloat(el.dataset.count);
+    const isDecimal = el.dataset.decimal === 'true';
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    const duration = 2000;
+    const start = performance.now();
+
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeOutExpo(progress);
+      const current = eased * target;
+
+      if (isDecimal) {
+        el.textContent = prefix + current.toFixed(1) + suffix;
+      } else {
+        el.textContent = prefix + Math.round(current) + suffix;
+      }
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      }
+    }
+    requestAnimationFrame(update);
+  }
+
+  // ========== PULL QUOTE WORD WRAP ==========
+  const pullquoteText = document.getElementById('pullquoteText');
+  if (pullquoteText) {
+    const text = pullquoteText.textContent.trim();
+    pullquoteText.innerHTML = text.split(/\s+/).map(function(word) {
+      return '<span class="word">' + word + '</span>';
+    }).join(' ');
+  }
+
+  // ========== CANVAS PARTICLES ==========
+  function initParticles(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || prefersReducedMotion) return;
+    const ctx = canvas.getContext('2d');
+    let width, height, particles, mouseX = -1000, mouseY = -1000;
+    const particleCount = window.innerWidth < 900 ? 0 : 50;
+    if (particleCount === 0) return;
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      width = canvas.width = rect.width;
+      height = canvas.height = rect.height;
+    }
+
+    function createParticles() {
+      particles = [];
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          r: Math.random() * 2 + 1,
+          alpha: Math.random() * 0.4 + 0.1
+        });
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        // Mouse repulsion
+        const dx = p.x - mouseX;
+        const dy = p.y - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          const force = (120 - dist) / 120 * 0.8;
+          p.vx += (dx / dist) * force;
+          p.vy += (dy / dist) * force;
+        }
+        // Damping
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+        p.x += p.vx;
+        p.y += p.vy;
+        // Wrap
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+        // Draw
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(74, 107, 90, ' + p.alpha + ')';
+        ctx.fill();
+      }
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    createParticles();
+    draw();
+    window.addEventListener('resize', function() { resize(); createParticles(); });
+
+    canvas.parentElement.addEventListener('mousemove', function(e) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+    });
+    canvas.parentElement.addEventListener('mouseleave', function() {
+      mouseX = -1000;
+      mouseY = -1000;
+    });
+  }
+
+  initParticles('heroCanvas');
+  initParticles('ctaCanvas');
+
+  // ========== CARD TILT ==========
+  if (!prefersReducedMotion) {
+    document.querySelectorAll('[data-tilt]').forEach(function(card) {
+      card.addEventListener('mousemove', function(e) {
+        const rect = card.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        card.style.transform = 'perspective(600px) rotateY(' + (x * 4) + 'deg) rotateX(' + (-y * 4) + 'deg) translateY(-4px) scale(1.02)';
+      });
+      card.addEventListener('mouseleave', function() {
+        card.style.transform = '';
+      });
+    });
+  }
+
+  // ========== MAGNETIC BUTTONS ==========
+  if (!prefersReducedMotion) {
+    document.querySelectorAll('.magnetic-btn').forEach(function(btn) {
+      btn.addEventListener('mousemove', function(e) {
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        btn.style.transform = 'translate(' + (x * 0.15) + 'px, ' + (y * 0.15 - 2) + 'px)';
+      });
+      btn.addEventListener('mouseleave', function() {
+        btn.style.transform = '';
+      });
+    });
+  }
+
+  // ========== GSAP ANIMATIONS ==========
+  if (hasGSAP && !prefersReducedMotion) {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Collect stagger group selectors so we don't double-animate
+    const staggerSelectors = [
+      '.pain-card.reveal',
+      '.problem-stat.reveal',
+      '.step-card.reveal',
+      '.tier-card.reveal',
+      '.moat-card.reveal',
+      '.pricing-card.reveal',
+      '.app-feature-dark.reveal',
+      '.app-mockup-dark.reveal'
+    ];
+    const staggerEls = new Set();
+
+    // --- Stagger groups ---
+    // Pain cards
+    gsap.from('.pain-card.reveal', {
+      scrollTrigger: { trigger: '.problem-cards', start: 'top 80%' },
+      y: 40, opacity: 0, stagger: 0.1, duration: 0.7, ease: 'power3.out',
+      onStart: function() { document.querySelectorAll('.pain-card.reveal').forEach(function(el) { staggerEls.add(el); }); }
+    });
+
+    // Problem stats
+    gsap.from('.problem-stat.reveal', {
+      scrollTrigger: { trigger: '.problem-stats', start: 'top 80%' },
+      y: 40, opacity: 0, stagger: 0.1, duration: 0.7, ease: 'power3.out',
+      onStart: function() { document.querySelectorAll('.problem-stat.reveal').forEach(function(el) { staggerEls.add(el); }); }
+    });
+
+    // Step cards
+    gsap.from('.step-card.reveal', {
+      scrollTrigger: { trigger: '.steps-grid', start: 'top 80%' },
+      y: 50, opacity: 0, stagger: 0.1, duration: 0.7, ease: 'power3.out',
+      onStart: function() { document.querySelectorAll('.step-card.reveal').forEach(function(el) { staggerEls.add(el); }); }
+    });
+
+    // Tier cards
+    gsap.from('.tier-card.reveal', {
+      scrollTrigger: { trigger: '.tier-grid', start: 'top 80%' },
+      y: 50, opacity: 0, stagger: 0.15, duration: 0.8, ease: 'power3.out',
+      onStart: function() { document.querySelectorAll('.tier-card.reveal').forEach(function(el) { staggerEls.add(el); }); }
+    });
+
+    // Moat cards
+    gsap.from('.moat-card.reveal', {
+      scrollTrigger: { trigger: '.moat-grid', start: 'top 80%' },
+      y: 40, opacity: 0, stagger: 0.1, duration: 0.7, ease: 'power3.out',
+      onStart: function() { document.querySelectorAll('.moat-card.reveal').forEach(function(el) { staggerEls.add(el); }); }
+    });
+
+    // Pricing cards
+    gsap.from('.pricing-card.reveal', {
+      scrollTrigger: { trigger: '.pricing-grid', start: 'top 80%' },
+      y: 50, opacity: 0, stagger: 0.12, duration: 0.7, ease: 'power3.out',
+      onStart: function() { document.querySelectorAll('.pricing-card.reveal').forEach(function(el) { staggerEls.add(el); }); }
+    });
+
+    // --- Individual reveals (skip stagger elements) ---
+    // Wait a frame for stagger sets to populate, then animate remaining .reveal elements
+    requestAnimationFrame(function() {
+      document.querySelectorAll('.reveal').forEach(function(el) {
+        if (staggerEls.has(el)) return;
+        // Check if part of a stagger selector
+        let isStagger = false;
+        for (let i = 0; i < staggerSelectors.length; i++) {
+          if (el.matches(staggerSelectors[i])) { isStagger = true; break; }
+        }
+        if (isStagger) return;
+
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 85%' },
+          y: 40, opacity: 0, duration: 0.7, ease: 'power3.out'
+        });
+      });
+    });
+
+    // --- Hero elements (immediate, no scroll needed) ---
+    const heroReveals = document.querySelectorAll('.hero .reveal');
+    gsap.from(heroReveals, {
+      y: 40, opacity: 0, stagger: 0.12, duration: 0.8, ease: 'power3.out', delay: 0.3
+    });
+
+    // --- Pull quote word-by-word reveal ---
+    const words = document.querySelectorAll('.pullquote-text .word');
+    if (words.length) {
+      gsap.to(words, {
+        scrollTrigger: {
+          trigger: '.pullquote-section',
+          start: 'top 70%',
+          end: 'bottom 40%',
+          scrub: 0.5
+        },
+        opacity: 1,
+        stagger: 0.08,
+        ease: 'none'
+      });
+    }
+
+    // --- Counters with ScrollTrigger ---
+    document.querySelectorAll('.counter').forEach(function(el) {
+      ScrollTrigger.create({
+        trigger: el,
+        start: 'top 85%',
+        once: true,
+        onEnter: function() { animateCounter(el); }
+      });
+    });
+
+    // --- Phone mockup progress bars ---
+    document.querySelectorAll('.progress-bar-fill').forEach(function(bar) {
+      ScrollTrigger.create({
+        trigger: bar,
+        start: 'top 90%',
+        once: true,
+        onEnter: function() {
+          bar.style.width = bar.dataset.width + '%';
+        }
+      });
+    });
+
+    // --- App features stagger ---
+    gsap.from('.app-feature-dark', {
+      x: -30, opacity: 0, duration: 0.6,
+      stagger: 0.1, ease: 'power3.out',
+      scrollTrigger: { trigger: '.app-features-dark', start: 'top 80%' }
+    });
+
+    // --- App mockup dark entrance ---
+    gsap.from('.app-mockup-dark', {
+      x: 80, opacity: 0, duration: 1, ease: 'power3.out',
+      scrollTrigger: { trigger: '.app-mockup-dark', start: 'top 85%' }
+    });
+
+    // --- Parallax on wave dividers ---
+    document.querySelectorAll('.wave-divider').forEach(function(wave) {
+      gsap.to(wave, {
+        scrollTrigger: {
+          trigger: wave,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 0.3
+        },
+        y: -15,
+        ease: 'none'
+      });
+    });
+
+  } else if (!prefersReducedMotion) {
+    // ========== FALLBACK: IntersectionObserver ==========
+    document.body.classList.add('no-gsap');
+
+    // Add reveal CSS for no-gsap
+    var style = document.createElement('style');
+    style.textContent = '.no-gsap .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; } .no-gsap .reveal.io-visible { opacity: 1; transform: none; }';
+    document.head.appendChild(style);
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('io-visible');
+          // Counters
+          if (entry.target.classList.contains('counter') || entry.target.querySelector('.counter')) {
+            var counters = entry.target.classList.contains('counter') ? [entry.target] : entry.target.querySelectorAll('.counter');
+            counters.forEach(animateCounter);
+          }
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+    document.querySelectorAll('.counter').forEach(function(el) { observer.observe(el); });
+
+    // Progress bars fallback
+    var barObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var bars = entry.target.querySelectorAll('.progress-bar-fill');
+          bars.forEach(function(bar) { bar.style.width = bar.dataset.width + '%'; });
+          barObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.phone-mockup, .app-mockup-dark').forEach(function(el) {
+      barObserver.observe(el);
+    });
+  } else {
+    // Reduced motion: make everything visible immediately
+    document.querySelectorAll('.reveal').forEach(function(el) {
+      el.style.opacity = '1';
+      el.style.transform = 'none';
+    });
+    document.querySelectorAll('.counter').forEach(function(el) {
+      var prefix = el.dataset.prefix || '';
+      var suffix = el.dataset.suffix || '';
+      el.textContent = prefix + el.dataset.count + suffix;
+    });
+    document.querySelectorAll('.progress-bar-fill').forEach(function(bar) {
+      bar.style.width = bar.dataset.width + '%';
+    });
+    document.querySelectorAll('.pullquote-text .word').forEach(function(w) {
+      w.style.opacity = '1';
+    });
+  }
+
+  // ========== SMOOTH SCROLL FOR NAV LINKS ==========
+  document.querySelectorAll('a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

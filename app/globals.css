@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+/* ========== Tailwind Theme ========== */
+@theme {
+  --color-ink: #0D0D1A;
+  --color-paper: #FAFAF7;
+  --color-cream: #F3F0E8;
+  --color-sage: #4A6B5A;
+  --color-sage-light: #E8F0EB;
+  --color-sage-dark: #3A5548;
+  --color-warm: #C4A882;
+  --color-coral: #D4654A;
+
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
+}
+
+/* ========== Base Styles ========== */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-ink);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+@layer base {
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+  }
+}
+
+/* ========== Reduced Motion ========== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  canvas {
+    display: none;
+  }
+}
+
+/* ========== Animations ========== */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(92, 184, 122, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(92, 184, 122, 0);
+  }
+}
+
+@keyframes float-pill {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes border-glow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes logo-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Logo stream — diagonal flowing rows */
+@keyframes stream-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.33%);
+  }
+}
+
+@keyframes stream-right {
+  0% {
+    transform: translateX(-33.33%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 107, 90, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(74, 107, 90, 0);
+  }
+}
+
+/* ========== Chillin Logo ========== */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-10deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+}
+
+.logo-mark:hover .logo-icon {
+  animation: wiggle 0.5s ease;
+}
+
+/* ========== Logo Scroll ========== */
+.logo-scroll-track {
+  display: flex;
+  width: max-content;
+  animation: logo-scroll 30s linear infinite;
+}
+
+.logo-scroll-track:hover {
+  animation-play-state: paused;
+}
+
+/* ========== Logo Stream (diagonal flow) ========== */
+.logo-stream-left {
+  width: max-content;
+  animation: stream-left 22s linear infinite;
+}
+
+.logo-stream-right {
+  width: max-content;
+  animation: stream-right 22s linear infinite;
+}
+
+
+/* ========== Progress Bar ========== */
+.progress-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.5s ease;
+}
+
+.fill-sage {
+  background: var(--color-sage);
+}
+.fill-orange {
+  background: #e67e22;
+}
+.fill-green {
+  background: #43a047;
+}
+
+/* Dark mockup progress bars */
+.progress-bar-track-dark {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
