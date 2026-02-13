@@ -172,45 +172,31 @@ export default function Pricing() {
         </StaggerContainer>
 
         <AnimateOnScroll>
-          <div className="relative mt-16 -mx-4 md:mx-0">
-            {/* Wavy blob banner */}
-            <div className="relative group cursor-default">
-              {/* SVG wavy background shape */}
-              <svg
-                viewBox="0 0 900 100"
-                preserveAspectRatio="none"
-                className="w-full h-[90px] md:h-[100px] drop-shadow-[0_6px_20px_rgba(13,13,26,0.15)] transition-transform duration-700 group-hover:scale-x-[1.01]"
-                aria-hidden="true"
-              >
-                <path
-                  d="M0,40 C60,0 120,10 200,25 C280,40 320,70 440,60 C560,50 600,15 700,30 C800,45 860,20 900,35 L900,65 C860,80 800,55 700,70 C600,85 560,50 440,60 C320,70 280,40 200,55 C120,70 60,90 0,60 Z"
-                  className="fill-ink"
-                />
-              </svg>
+          <div className="mt-14 flex justify-center">
+            <div
+              className="relative inline-flex items-center gap-4 md:gap-6 px-8 md:px-12 py-4 rounded-full bg-ink text-paper shadow-[0_4px_24px_rgba(13,13,26,0.15)] transition-all duration-500 hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(13,13,26,0.2)] group"
+              style={{ rotate: "-0.8deg" }}
+            >
+              {/* Founding member label */}
+              <span className="text-[10px] md:text-xs font-bold tracking-[0.18em] uppercase text-sage">
+                Founding Member
+              </span>
 
-              {/* Content overlay on the wavy shape */}
-              <div className="absolute inset-0 flex items-center justify-center gap-3 md:gap-6 px-6">
-                <span className="text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase text-sage">
-                  Founding Member
-                </span>
+              {/* Dot separator */}
+              <span className="w-1 h-1 rounded-full bg-paper/20 hidden sm:block" />
 
-                <span className="text-paper/25 text-lg hidden sm:inline">
-                  /
-                </span>
+              {/* The deal */}
+              <span className="font-serif text-xl md:text-2xl font-extrabold leading-none">
+                50% <span className="text-sage">OFF</span>
+              </span>
 
-                <span className="font-serif text-2xl md:text-3xl font-extrabold text-paper leading-none">
-                  50<span className="text-lg">%</span>{" "}
-                  <span className="text-sage">OFF</span>
-                </span>
+              {/* Dot separator */}
+              <span className="w-1 h-1 rounded-full bg-paper/20 hidden sm:block" />
 
-                <span className="text-paper/25 text-lg hidden sm:inline">
-                  /
-                </span>
-
-                <span className="text-[11px] md:text-xs text-paper/50 font-medium tracking-wide">
-                  Locked in forever. Yes, really.
-                </span>
-              </div>
+              {/* Tagline */}
+              <span className="text-[11px] md:text-xs text-paper/45 font-medium tracking-wide hidden sm:block">
+                Locked in forever
+              </span>
             </div>
           </div>
         </AnimateOnScroll>
