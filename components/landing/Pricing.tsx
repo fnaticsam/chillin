@@ -174,7 +174,7 @@ export default function Pricing() {
         <AnimateOnScroll>
           <div className="mt-14 flex justify-center">
             <div
-              className="relative inline-flex items-center gap-4 md:gap-6 px-8 md:px-12 py-4 rounded-full bg-ink text-paper shadow-[0_4px_24px_rgba(13,13,26,0.15)] hover:shadow-[0_12px_36px_rgba(13,13,26,0.2)] group"
+              className="relative inline-flex items-center gap-4 md:gap-6 px-8 md:px-12 py-4 rounded-full bg-white border border-black/[0.06] text-ink shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.1)] group"
               style={{ animation: "gentle-float 6s ease-in-out infinite" }}
             >
               {/* Founding member label */}
@@ -183,18 +183,18 @@ export default function Pricing() {
               </span>
 
               {/* Dot separator */}
-              <span className="w-1 h-1 rounded-full bg-paper/20 hidden sm:block" />
+              <span className="w-1 h-1 rounded-full bg-ink/15 hidden sm:block" />
 
               {/* The deal */}
-              <span className="font-serif text-xl md:text-2xl font-extrabold leading-none">
+              <span className="font-serif text-xl md:text-2xl font-extrabold leading-none text-ink">
                 50% <span className="text-sage">OFF</span>
               </span>
 
               {/* Dot separator */}
-              <span className="w-1 h-1 rounded-full bg-paper/20 hidden sm:block" />
+              <span className="w-1 h-1 rounded-full bg-ink/15 hidden sm:block" />
 
               {/* Tagline */}
-              <span className="text-[11px] md:text-xs text-paper/45 font-medium tracking-wide hidden sm:block">
+              <span className="text-[11px] md:text-xs text-ink/45 font-medium tracking-wide hidden sm:block">
                 Locked in forever
               </span>
             </div>
