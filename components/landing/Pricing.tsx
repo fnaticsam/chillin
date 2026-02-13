@@ -174,29 +174,46 @@ export default function Pricing() {
         <AnimateOnScroll>
           <div className="mt-14 flex justify-center">
             <div
-              className="relative inline-flex items-center gap-4 md:gap-6 px-8 md:px-12 py-4 rounded-full bg-white border border-black/[0.06] text-ink shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.1)] group"
+              className="relative inline-flex items-center justify-center group"
               style={{ animation: "gentle-float 6s ease-in-out infinite" }}
             >
-              {/* Founding member label */}
-              <span className="text-[10px] md:text-xs font-bold tracking-[0.18em] uppercase text-sage">
-                Founding Member
-              </span>
+              {/* Wavy pill SVG background */}
+              <svg
+                viewBox="0 0 500 60"
+                fill="none"
+                className="absolute inset-0 w-full h-full drop-shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M30,2 C12,2 2,14 2,30 C2,46 12,58 30,58
+                     L60,57 C120,54 160,56 220,58 C280,60 320,56 360,54 C400,52 440,55 470,58
+                     C488,58 498,46 498,30 C498,14 488,2 470,2
+                     L440,3 C400,5 360,3 320,1 C280,-1 220,4 160,3 C120,2 60,4 30,2 Z"
+                  fill="white"
+                  stroke="rgba(0,0,0,0.06)"
+                  strokeWidth="1"
+                />
+              </svg>
 
-              {/* Dot separator */}
-              <span className="w-1 h-1 rounded-full bg-ink/15 hidden sm:block" />
+              {/* Content */}
+              <div className="relative flex items-center gap-4 md:gap-6 px-10 md:px-14 py-4">
+                <span className="text-[10px] md:text-xs font-bold tracking-[0.18em] uppercase text-sage">
+                  Founding Member
+                </span>
 
-              {/* The deal */}
-              <span className="font-serif text-xl md:text-2xl font-extrabold leading-none text-ink">
-                50% <span className="text-sage">OFF</span>
-              </span>
+                <span className="w-1 h-1 rounded-full bg-ink/15 hidden sm:block" />
 
-              {/* Dot separator */}
-              <span className="w-1 h-1 rounded-full bg-ink/15 hidden sm:block" />
+                <span className="font-serif text-xl md:text-2xl font-extrabold leading-none text-ink">
+                  50% <span className="text-sage">OFF</span>
+                </span>
 
-              {/* Tagline */}
-              <span className="text-[11px] md:text-xs text-ink/45 font-medium tracking-wide hidden sm:block">
-                Locked in forever
-              </span>
+                <span className="w-1 h-1 rounded-full bg-ink/15 hidden sm:block" />
+
+                <span className="text-[11px] md:text-xs text-ink/45 font-medium tracking-wide hidden sm:block">
+                  Locked in forever
+                </span>
+              </div>
             </div>
           </div>
         </AnimateOnScroll>
