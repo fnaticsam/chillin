@@ -7,7 +7,7 @@ import { StaggerContainer, StaggerItem } from "@/components/ui/AnimateOnScroll";
 
 function IconChatbotLoop() {
   return (
-    <svg viewBox="0 0 48 48" width={40} height={40} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+    <svg viewBox="0 0 48 48" width={48} height={48} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
       <rect x="8" y="10" width="24" height="18" rx="4" />
       <path d="M14 28 l-2 6 6-3" />
       <circle cx="15" cy="19" r="1.5" fill="currentColor" stroke="none" />
@@ -21,7 +21,7 @@ function IconChatbotLoop() {
 
 function IconPhoneDisconnected() {
   return (
-    <svg viewBox="0 0 48 48" width={40} height={40} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+    <svg viewBox="0 0 48 48" width={48} height={48} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
       <path d="M13 8 c0 0 -5 2 -5 10 c0 8 8 16 16 20 c8 4 10 -1 10 -1 l-4 -6 c0 0 -2 1 -4 0 c-3 -1.5 -8 -6 -10 -10 c-1 -2 0 -4 0 -4 z" />
       <line x1="30" y1="8" x2="42" y2="20" />
       <path d="M34 6 l1 5 -3 1 2 4" />
@@ -32,7 +32,7 @@ function IconPhoneDisconnected() {
 
 function IconConfused() {
   return (
-    <svg viewBox="0 0 48 48" width={40} height={40} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+    <svg viewBox="0 0 48 48" width={48} height={48} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
       <circle cx="24" cy="24" r="16" />
       <path d="M14 16 Q 17 13 20 16" />
       <path d="M28 18 Q 31 15 34 18" />
@@ -47,7 +47,7 @@ function IconConfused() {
 
 function IconWhiteFlag() {
   return (
-    <svg viewBox="0 0 48 48" width={40} height={40} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+    <svg viewBox="0 0 48 48" width={48} height={48} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
       <line x1="14" y1="8" x2="14" y2="42" />
       <path d="M14 8 Q 22 6 28 12 Q 34 18 40 16 L40 28 Q 34 30 28 24 Q 22 18 14 20 Z" />
       <path d="M10 42 h8" />
@@ -92,8 +92,8 @@ const painCards = [
     rotate: "-2deg",
     accent: "border-l-[3px] border-l-coral",
     bg: "bg-white",
-    iconBg: "bg-coral/[0.08]",
   },
+
   {
     icon: IconPhoneDisconnected,
     title: "45 min hold, whoops disconnected.",
@@ -101,7 +101,6 @@ const painCards = [
     rotate: "1.5deg",
     accent: "border-b-[3px] border-b-coral/60",
     bg: "bg-coral/[0.03]",
-    iconBg: "bg-white/80",
   },
   {
     icon: IconConfused,
@@ -110,7 +109,6 @@ const painCards = [
     rotate: "-1deg",
     accent: "ring-1 ring-coral/15",
     bg: "bg-white",
-    iconBg: "bg-coral/[0.06]",
   },
   {
     icon: IconWhiteFlag,
@@ -119,7 +117,6 @@ const painCards = [
     rotate: "2.5deg",
     accent: "border-t-[3px] border-t-coral/50",
     bg: "bg-ink/[0.03]",
-    iconBg: "bg-coral/[0.08]",
   },
 ];
 
@@ -151,7 +148,7 @@ export default function Problem() {
 
         {/* ── 2. Pain cards — scattered, each unique ── */}
         <StaggerContainer
-          className="grid grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10"
           stagger={0.1}
         >
           {painCards.map((card, i) => {
@@ -167,7 +164,7 @@ export default function Problem() {
                     {i + 1}
                   </div>
                   {/* Icon */}
-                  <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl ${card.iconBg} text-coral mb-4 transition-all duration-300 group-hover:scale-110`}>
+                  <div className="inline-flex items-center justify-center text-coral mb-4 transition-all duration-300 group-hover:scale-110">
                     <Icon />
                   </div>
                   <h4 className="font-serif text-base md:text-lg lg:text-xl font-bold leading-snug mb-2">

@@ -14,22 +14,6 @@ const quote =
   "There's not a problem that I can't fix, cause I can do it in the mix";
 const words = quote.split(" ");
 
-// Custom timing: fast reveal with a dramatic pause before "cause"
-function getWordTiming(index: number) {
-  const pauseWord = 8;
-  if (index < pauseWord) {
-    const start = (index / pauseWord) * 0.3;
-    const end = ((index + 1) / pauseWord) * 0.3;
-    return { start, mid: (start + end) / 2, end };
-  } else {
-    const i = index - pauseWord;
-    const count = words.length - pauseWord;
-    const start = 0.5 + (i / count) * 0.3;
-    const end = 0.5 + ((i + 1) / count) * 0.3;
-    return { start, mid: (start + end) / 2, end };
-  }
-}
-
 /* ── Smiley face SVG ── */
 function Smiley({ size }: { size: number }) {
   return (
@@ -51,7 +35,7 @@ function Smiley({ size }: { size: number }) {
   );
 }
 
-/* ── Floating smiley positions — higher opacity, visible color ── */
+/* ── Floating smiley positions ── */
 const floatingSmileys = [
   { x: 5, y: 15, size: 36, opacity: 0.35, speed: 50, floatAmp: 14, floatDur: 4.0 },
   { x: 88, y: 10, size: 28, opacity: 0.25, speed: -40, floatAmp: 10, floatDur: 5.2 },
@@ -72,7 +56,6 @@ function FloatingSmiley({
   smiley: (typeof floatingSmileys)[0];
   scrollProgress: MotionValue<number>;
 }) {
-  // Parallax Y driven by scroll
   const parallaxY = useTransform(
     scrollProgress,
     [0, 1],
@@ -88,7 +71,6 @@ function FloatingSmiley({
         opacity: smiley.opacity,
         y: parallaxY,
       }}
-      // Continuous float animation via Framer Motion (no CSS conflict)
       animate={{
         translateY: [0, -smiley.floatAmp, 0],
         rotate: [0, smiley.speed > 0 ? 6 : -6, 0],
@@ -115,14 +97,15 @@ export default function PullQuote() {
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
-    offset: ["start 0.85", "end 0.15"],
+    // Start tracking well before section enters, finish after it leaves
+    offset: ["start end", "end start"],
   });
 
   return (
     <section
       ref={sectionRef}
       id="pullquote"
-      className="relative bg-ink text-cream py-16 md:py-20 lg:py-24 overflow-hidden"
+      className="relative bg-ink text-cream py-20 md:py-28 lg:py-32 overflow-hidden"
     >
       {/* Glow */}
       <div
@@ -147,11 +130,10 @@ export default function PullQuote() {
 
       <div className="relative max-w-[1200px] mx-auto px-8 md:px-12">
         <div className="relative flex items-center justify-center min-h-[160px] md:min-h-[200px]">
-          {/* Quote text */}
           <div className="relative z-[1] text-center">
             <p className="font-serif text-2xl md:text-4xl lg:text-[2.75rem] font-semibold leading-tight whitespace-nowrap mx-auto mb-3 italic">
               {words.map((word, i) => (
-                <WordReveal
+                <KaraokeWord
                   key={i}
                   word={word}
                   index={i}
@@ -170,9 +152,10 @@ export default function PullQuote() {
   );
 }
 
-function WordReveal({
+function KaraokeWord({
   word,
   index,
+  total,
   progress,
 }: {
   word: string;
@@ -180,42 +163,54 @@ function WordReveal({
   total: number;
   progress: MotionValue<number>;
 }) {
-  const { start, mid, end } = getWordTiming(index);
+  // Evenly distribute words across scroll range 0.2 → 0.7
+  // (section is tracked from "start end" to "end start", so
+  //  0.2 ≈ section entering viewport, 0.7 ≈ section about to leave)
+  const rangeStart = 0.2;
+  const rangeEnd = 0.65;
+  const wordWidth = (rangeEnd - rangeStart) / total;
+  const activate = rangeStart + index * wordWidth;
+  const peak = activate + wordWidth * 0.5;
+  const settle = activate + wordWidth;
 
-  // Opacity: start dim, end fully bright white
-  const opacity = useTransform(progress, [start, end], [0.15, 1]);
-
-  // Bounce: word drops in from above, overshoots down, settles
-  const rawY = useTransform(
-    progress,
-    [start, mid, end],
-    [18, -4, 0]
-  );
-  const y = useSpring(rawY, { stiffness: 300, damping: 20 });
-
-  // Scale: starts small, pops slightly bigger, settles
-  const rawScale = useTransform(
-    progress,
-    [start, mid, end],
-    [0.92, 1.08, 1]
-  );
-  const scale = useSpring(rawScale, { stiffness: 300, damping: 18 });
-
-  // Color: transition from muted sage to bright white
+  // Color: sharp karaoke sweep from dim to white
   const color = useTransform(
     progress,
-    [start, (start + end) / 2, end],
-    ["rgba(74, 107, 90, 0.6)", "rgba(250, 250, 247, 0.85)", "rgba(255, 255, 255, 1)"]
+    [activate, settle],
+    ["rgba(100, 100, 110, 0.35)", "rgba(255, 255, 255, 1)"]
   );
+
+  // Opacity stays visible throughout but ramps up
+  const opacity = useTransform(
+    progress,
+    [activate, settle],
+    [0.35, 1]
+  );
+
+  // Bounce: pop up, overshoot, settle
+  const rawY = useTransform(
+    progress,
+    [activate, peak, settle],
+    [12, -8, 0]
+  );
+  const y = useSpring(rawY, { stiffness: 400, damping: 15, mass: 0.5 });
+
+  // Scale: pop bigger at activation, settle back
+  const rawScale = useTransform(
+    progress,
+    [activate, peak, settle],
+    [0.95, 1.12, 1.0]
+  );
+  const scale = useSpring(rawScale, { stiffness: 400, damping: 15, mass: 0.5 });
 
   return (
     <motion.span
       className="inline-block mr-[0.25em]"
       style={{
+        color,
         opacity,
         y,
         scale,
-        color,
       }}
     >
       {word}
