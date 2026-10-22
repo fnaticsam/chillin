@@ -24,7 +24,7 @@ export default function WaitlistProvider({ children }: { children: ReactNode }) 
   return (
     <WaitlistContext.Provider value={{ openWaitlistModal }}>
       {children}
-      <WaitlistModal isOpen={isOpen} onClose={closeWaitlistModal} />
+      <WaitlistModal key={isOpen ? "open" : "closed"} isOpen={isOpen} onClose={closeWaitlistModal} />
     </WaitlistContext.Provider>
   );
 }

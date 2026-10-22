@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, FormEvent } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { motion, useInView, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useWaitlistSignup } from "@/components/ui/useWaitlistSignup";
 
 const containerVariants = {
   hidden: {},
@@ -39,10 +39,12 @@ function CountUp({
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
+  const reduceMotion = useReducedMotion();
   const [display, setDisplay] = useState("0" + suffix);
 
   useEffect(() => {
-    if (!inView) return;
+    if (!inView || reduceMotion) return;
+    let frame = 0;
     const timeout = setTimeout(() => {
       const start = performance.now();
       const step = (now: number) => {
@@ -52,14 +54,14 @@ function CountUp({
         const eased = 1 - Math.pow(1 - progress, 3);
         const value = eased * end;
         setDisplay(value.toFixed(decimals) + suffix);
-        if (progress < 1) requestAnimationFrame(step);
+        if (progress < 1) frame = requestAnimationFrame(step);
       };
-      requestAnimationFrame(step);
+      frame = requestAnimationFrame(step);
     }, delay);
-    return () => clearTimeout(timeout);
-  }, [inView, end, suffix, decimals, duration, delay]);
+    return () => { clearTimeout(timeout); cancelAnimationFrame(frame); };
+  }, [inView, end, suffix, decimals, duration, delay, reduceMotion]);
 
-  return <span ref={ref}>{display}</span>;
+  return <span ref={ref}>{reduceMotion ? end.toFixed(decimals) + suffix : display}</span>;
 }
 
 /* ─── per-stat stagger variants ─── */
@@ -83,41 +85,7 @@ const statItemVariants = {
 };
 
 export default function Hero() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-
-    setStatus("loading");
-    setErrorMsg("");
-
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || "Something went wrong.");
-        setStatus("error");
-        return;
-      }
-
-      setStatus("success");
-      setTimeout(() => {
-        router.push(`/waitlist?ref=${data.refCode}`);
-      }, 800);
-    } catch {
-      setErrorMsg("Something went wrong. Try again.");
-      setStatus("error");
-    }
-  }
+  const { email, setEmail, status, setStatus, errorMsg, handleSubmit } = useWaitlistSignup();
 
   return (
     <section
@@ -161,7 +129,7 @@ export default function Hero() {
         {/* ── Inline email capture ── */}
         <motion.div
           variants={itemVariants}
-          className="relative inline-block mb-20"
+          className="relative inline-block w-full max-w-[560px] mb-20"
         >
           <div
             className="relative bg-white rounded-2xl p-2 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-black/[0.06] transition-all duration-500 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] hover:rotate-0"
@@ -170,6 +138,7 @@ export default function Hero() {
             <AnimatePresence mode="wait">
               {status === "success" ? (
                 <motion.div
+                  role="status"
                   key="success"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -185,9 +154,16 @@ export default function Hero() {
                 <motion.form
                   key="form"
                   onSubmit={handleSubmit}
-                  className="flex items-center gap-2"
+                  className="flex flex-col sm:flex-row items-stretch gap-2"
                 >
+                  <label htmlFor="hero-email" className="sr-only">Email address</label>
                   <input
+                    id="hero-email"
+                    name="email"
+                    autoComplete="email"
+                    maxLength={254}
+                    aria-invalid={status === "error"}
+                    aria-describedby={status === "error" ? "hero-email-error" : undefined}
                     type="email"
                     placeholder="your@email.com"
                     value={email}
@@ -195,7 +171,7 @@ export default function Hero() {
                       setEmail(e.target.value);
                       if (status === "error") setStatus("idle");
                     }}
-                    className="w-[240px] md:w-[300px] px-5 py-3.5 rounded-xl bg-transparent text-ink placeholder:text-ink/30 text-base focus:outline-none"
+                    className="w-full min-w-0 sm:flex-1 px-5 py-3.5 rounded-xl bg-transparent text-ink placeholder:text-ink/30 text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-sage"
                     required
                     disabled={status === "loading"}
                   />
@@ -227,7 +203,7 @@ export default function Hero() {
           {/* Error message */}
           <AnimatePresence>
             {status === "error" && errorMsg && (
-              <motion.p
+              <motion.p id="hero-email-error" role="alert"
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}

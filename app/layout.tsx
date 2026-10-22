@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
+import MotionPreferences from "@/components/ui/MotionPreferences";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -33,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
-      <body>{children}</body>
+      <body><MotionPreferences>{children}</MotionPreferences></body>
     </html>
   );
 }

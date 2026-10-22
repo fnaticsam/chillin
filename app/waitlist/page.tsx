@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import ChillinLogo from "@/components/ui/ChillinLogo";
@@ -28,31 +28,6 @@ export default function WaitlistPageWrapper() {
   );
 }
 
-/* ── Boost task data (visual only) ── */
-const boostTasks = [
-  {
-    title: "Invite your friends",
-    desc: "Every verified signup moves you up. No limits.",
-    spots: "+30 spots / friend",
-    type: "referral" as const,
-    status: "active" as const,
-  },
-  {
-    title: "Share on social media",
-    desc: "Share your invite link. Take a screenshot. Upload to jump.",
-    spots: "+100 spots",
-    type: "social" as const,
-    status: "available" as const,
-  },
-  {
-    title: "Follow us on X",
-    desc: "Stay in the loop. We post updates there first.",
-    spots: "+50 spots",
-    type: "follow" as const,
-    status: "available" as const,
-  },
-];
-
 /* ── Animation variants ── */
 const containerVariants = {
   hidden: {},
@@ -71,52 +46,66 @@ const itemVariants = {
 };
 
 function WaitlistPageContent() {
-  const searchParams = useSearchParams();
-  const ref = searchParams.get("ref");
+  const ref = useSearchParams().get("ref");
+  return <WaitlistDetails key={ref ?? "missing"} referralCode={ref} />;
+}
+
+function WaitlistDetails({ referralCode: ref }: { referralCode: string | null }) {
 
   const [data, setData] = useState<WaitlistData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(Boolean(ref));
+  const [error, setError] = useState(ref ? "" : "No referral code found.");
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState("");
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const referralLink =
     typeof window !== "undefined" && ref
-      ? `${window.location.origin}?ref=${ref}`
+      ? `${window.location.origin}?ref=${encodeURIComponent(ref)}`
       : "";
 
   useEffect(() => {
-    if (!ref) {
-      setError("No referral code found.");
-      setLoading(false);
-      return;
-    }
+    if (!ref) return;
 
-    fetch(`/api/waitlist?ref=${ref}`)
+    const controller = new AbortController();
+    fetch(`/api/waitlist?ref=${encodeURIComponent(ref)}`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error("Not found");
         return res.json();
       })
       .then((d) => {
+        if (controller.signal.aborted) return;
         setData(d);
         setLoading(false);
       })
       .catch(() => {
+        if (controller.signal.aborted) return;
         setError("Couldn\u2019t find your spot. Try signing up again.");
         setLoading(false);
       });
+    return () => controller.abort();
   }, [ref]);
 
-  function copyLink() {
+  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
+
+  async function copyLink() {
     if (!referralLink) return;
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied(false);
+    setCopyError("");
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      copyTimer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError("Could not copy. Select and copy the invite link manually.");
+    }
   }
 
   /* ── Loading state ── */
   if (loading) {
     return (
-      <div className="min-h-screen bg-ink flex items-center justify-center">
+      <div role="status" aria-label="Loading your waitlist position" className="min-h-screen bg-ink flex items-center justify-center">
         <div className="w-8 h-8 border-3 border-paper/20 border-t-sage rounded-full animate-spin" />
       </div>
     );
@@ -178,8 +167,7 @@ function WaitlistPageContent() {
             You&apos;re in. Now get comfy.
           </h1>
           <p className="text-base text-paper/50 leading-relaxed max-w-[440px] mx-auto">
-            Founding member perks are locked in. Move up the list and you&apos;ll
-            get access sooner.
+            Founding member perks are locked in. We&apos;ll email you when access is ready.
           </p>
         </motion.div>
 
@@ -203,7 +191,7 @@ function WaitlistPageContent() {
 
             <div className="relative z-[1]">
               <div className="text-xs font-semibold tracking-[0.15em] uppercase text-sage mb-4">
-                Your Waitlist Rank
+                Your Signup Position
               </div>
               <div className="font-serif text-6xl md:text-7xl lg:text-8xl font-extrabold text-paper mb-3 leading-none">
                 #{data.position.toLocaleString()}
@@ -225,10 +213,10 @@ function WaitlistPageContent() {
         {/* ── Boost Section ── */}
         <motion.div variants={itemVariants} className="mb-6">
           <h2 className="font-serif text-2xl font-bold text-paper mb-2 text-center">
-            Move up the list
+            Share the waitlist
           </h2>
           <p className="text-sm text-paper/40 text-center mb-8">
-            Every little bit helps. The higher you are, the sooner you&apos;re in.
+            Invite friends who might like Chillin. Your signup position stays the same.
           </p>
         </motion.div>
 
@@ -238,22 +226,20 @@ function WaitlistPageContent() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
               <div>
                 <h3 className="font-serif text-lg font-bold text-paper mb-1">
-                  {boostTasks[0].title}
+                  Invite your friends
                 </h3>
                 <p className="text-sm text-paper/45">
-                  {boostTasks[0].desc}
+                  Share your link to track signups from friends.
                 </p>
               </div>
               <div className="text-sm font-semibold text-sage whitespace-nowrap">
-                {boostTasks[0].spots}
+                Invite link
               </div>
             </div>
 
             {/* Referral link + copy */}
             <div className="flex items-center gap-2">
-              <div className="flex-1 px-4 py-3 rounded-xl bg-ink/40 border border-paper/[0.08] text-sm text-paper/60 truncate font-mono">
-                {referralLink || "loading..."}
-              </div>
+              <input aria-label="Your invite link" readOnly value={referralLink} className="min-w-0 flex-1 px-4 py-3 rounded-xl bg-ink/40 border border-paper/[0.08] text-sm text-paper/80 font-mono" />
               <button
                 onClick={copyLink}
                 className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-paper text-sm font-semibold transition-all duration-300 hover:bg-sage-dark hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(74,107,90,0.3)] whitespace-nowrap"
@@ -291,6 +277,8 @@ function WaitlistPageContent() {
               </button>
             </div>
 
+            <p role="status" className="text-sm mt-3 text-paper/80">{copied ? "Invite link copied." : copyError}</p>
+
             {/* Referral count */}
             {data.referralCount > 0 && (
               <div className="mt-4 text-xs text-sage font-medium">
@@ -300,39 +288,10 @@ function WaitlistPageContent() {
           </div>
         </motion.div>
 
-        {/* ── Other boost tasks (visual only) ── */}
-        {boostTasks.slice(1).map((task) => (
-          <motion.div key={task.title} variants={itemVariants} className="mb-4">
-            <div className="rounded-2xl bg-paper/[0.04] border border-paper/[0.08] p-6 md:p-7 transition-all duration-300 hover:bg-paper/[0.06] hover:border-paper/[0.12]">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="font-serif text-base font-bold text-paper">
-                      {task.title}
-                    </h3>
-                    <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-paper/[0.08] text-paper/40 uppercase tracking-wider">
-                      Available
-                    </span>
-                  </div>
-                  <p className="text-sm text-paper/40">{task.desc}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-warm whitespace-nowrap">
-                    {task.spots}
-                  </span>
-                  <button className="px-5 py-2.5 rounded-xl bg-paper/[0.08] text-paper/60 text-sm font-semibold transition-all duration-300 hover:bg-paper/[0.12] hover:text-paper whitespace-nowrap">
-                    Show details
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-
         {/* ── Footer note ── */}
         <motion.div variants={itemVariants} className="mt-12 text-center">
           <p className="text-xs text-paper/25 leading-relaxed">
-            Every friend who signs up bumps you up. No catch.
+            Invites are counted when a friend joins the waitlist.
             <br />
             Founding members get 50% off for life. We mean it.
           </p>

@@ -1,58 +1,18 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
 
-type FormState = "idle" | "loading" | "success" | "error";
+import { motion, AnimatePresence } from "framer-motion";
+import { useWaitlistSignup } from "./useWaitlistSignup";
+
+
 
 export default function WaitlistForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [state, setState] = useState<FormState>("idle");
-  const [errorMsg, setErrorMsg] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!email || !email.includes("@")) {
-      setErrorMsg("Please enter a valid email.");
-      setState("error");
-      return;
-    }
-
-    setState("loading");
-    setErrorMsg("");
-
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || "Something went wrong. Try again.");
-        setState("error");
-        return;
-      }
-
-      setState("success");
-      setTimeout(() => {
-        router.push(`/waitlist?ref=${data.refCode}`);
-      }, 800);
-    } catch {
-      setErrorMsg("Something went wrong. Try again.");
-      setState("error");
-    }
-  };
+  const { email, setEmail, status: state, setStatus: setState, errorMsg, setErrorMsg, handleSubmit } = useWaitlistSignup();
 
   if (state === "success") {
     return (
       <motion.div
+        role="status"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -86,10 +46,16 @@ export default function WaitlistForm() {
     <div className="w-full max-w-[480px] mx-auto">
       <form onSubmit={handleSubmit} className="relative">
         <div
-          className="inline-flex items-center bg-white rounded-2xl p-2 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-white/20 transition-all duration-500 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+          className="flex flex-col sm:flex-row items-stretch bg-white rounded-2xl p-2 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-white/20 transition-all duration-500 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
         >
+          <label htmlFor="waitlist-email" className="sr-only">Email address</label>
           <input
-            ref={inputRef}
+            id="waitlist-email"
+            name="email"
+            maxLength={254}
+            required
+            aria-invalid={state === "error"}
+            aria-describedby={state === "error" ? "waitlist-email-error" : undefined}
             type="email"
             value={email}
             onChange={(e) => {
@@ -100,7 +66,7 @@ export default function WaitlistForm() {
               }
             }}
             placeholder="your@email.com"
-            className="w-[240px] md:w-[300px] px-5 py-3.5 rounded-xl bg-transparent text-ink placeholder:text-ink/30 text-base focus:outline-none"
+            className="w-full min-w-0 sm:flex-1 px-5 py-3.5 rounded-xl bg-transparent text-ink placeholder:text-ink/30 text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-sage"
             disabled={state === "loading"}
             autoComplete="email"
           />
@@ -138,7 +104,7 @@ export default function WaitlistForm() {
 
       <AnimatePresence>
         {state === "error" && errorMsg && (
-          <motion.p
+          <motion.p id="waitlist-email-error" role="alert"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
