@@ -29,7 +29,8 @@ jobs:
       - name: Browser regression tests
         if: ${{ hashFiles('tests/ui.browser.cjs') != '' }}
         run: |
-          npx puppeteer browsers install chrome --install-deps
+          # Use the hosted image libraries; do not install system packages as root.
+          npx puppeteer browsers install chrome
           export CHROMIUM_PATH="$(node -p 'require("puppeteer").executablePath()')"
           npm start -- --hostname 127.0.0.1 > /tmp/chillin-server.log 2>&1 &
           server_pid=$!
