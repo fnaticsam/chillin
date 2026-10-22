@@ -31,7 +31,7 @@ jobs:
         run: |
           # Use the hosted image libraries; do not install system packages as root.
           npx puppeteer browsers install chrome
-          export CHROMIUM_PATH="$(node -p 'require("puppeteer").executablePath()')"
+          export CHROMIUM_PATH="$(node -e 'Promise.resolve(require("puppeteer").executablePath()).then(console.log)')"
           npm start -- --hostname 127.0.0.1 > /tmp/chillin-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
