@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import ChillinLogo from "@/components/ui/ChillinLogo";
 
 /* ── Types ── */
@@ -123,12 +124,12 @@ function WaitlistDetails({ referralCode: ref }: { referralCode: string | null })
             Hmm, something&apos;s off
           </h1>
           <p className="text-paper/50 mb-8">{error}</p>
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-cream text-ink font-semibold transition-all duration-300 hover:-translate-y-0.5"
           >
             Back to home
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -139,15 +140,15 @@ function WaitlistDetails({ referralCode: ref }: { referralCode: string | null })
       {/* ── Nav ── */}
       <nav className="py-5 px-8 md:px-12">
         <div className="max-w-[900px] mx-auto flex items-center justify-between">
-          <a href="/">
+          <Link href="/">
             <ChillinLogo />
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="text-sm text-paper/40 hover:text-paper transition-colors duration-200"
           >
             Back to home
-          </a>
+          </Link>
         </div>
       </nav>
 
