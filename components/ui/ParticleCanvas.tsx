@@ -50,14 +50,10 @@ export default function ParticleCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Respect reduced motion
-    const prefersReduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    if (prefersReduced) return;
-
-    // Skip on mobile
-    if (window.innerWidth < 900) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const desktop = window.matchMedia("(min-width: 900px)");
+    let visible = false;
+    let running = false;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -73,6 +69,7 @@ export default function ParticleCanvas({
     };
 
     const draw = () => {
+      if (!running) return;
       const { w, h } = sizeRef.current;
       ctx.clearRect(0, 0, w, h);
 
@@ -81,7 +78,7 @@ export default function ParticleCanvas({
         const dy = p.y - mouseRef.current.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < 120) {
+        if (dist > 0 && dist < 120) {
           const force = ((120 - dist) / 120) * 0.8;
           p.vx += (dx / dist) * force;
           p.vy += (dy / dist) * force;
@@ -106,10 +103,19 @@ export default function ParticleCanvas({
       animRef.current = requestAnimationFrame(draw);
     };
 
-    resize();
-    draw();
-
-    const handleResize = () => resize();
+    const update = () => {
+      const shouldRun = visible && !document.hidden && desktop.matches && !reducedMotion.matches;
+      if (shouldRun === running) return;
+      running = shouldRun;
+      if (running) { resize(); draw(); }
+      else { cancelAnimationFrame(animRef.current); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    };
+    const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); });
+    observer.observe(canvas);
+    reducedMotion.addEventListener("change", update);
+    desktop.addEventListener("change", update);
+    document.addEventListener("visibilitychange", update);
+    const handleResize = () => { if (running) resize(); };
     window.addEventListener("resize", handleResize);
 
     const parent = canvas.parentElement;
@@ -129,6 +135,11 @@ export default function ParticleCanvas({
     parent?.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
+      running = false;
+      observer.disconnect();
+      reducedMotion.removeEventListener("change", update);
+      desktop.removeEventListener("change", update);
+      document.removeEventListener("visibilitychange", update);
       cancelAnimationFrame(animRef.current);
       window.removeEventListener("resize", handleResize);
       parent?.removeEventListener("mousemove", handleMouseMove);
@@ -139,6 +150,7 @@ export default function ParticleCanvas({
   return (
     <canvas
       ref={canvasRef}
+      aria-hidden="true"
       className={`absolute top-0 left-0 w-full h-full pointer-events-none z-0 ${className}`}
     />
   );
