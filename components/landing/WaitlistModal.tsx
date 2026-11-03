@@ -8,7 +8,12 @@ interface WaitlistModalProps { isOpen: boolean; onClose: () => void }
 
 export default function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const { email, setEmail, status, setStatus, errorMsg, handleSubmit } = useWaitlistSignup(onClose);
+  const { email, setEmail, status, setStatus, errorMsg, handleSubmit, cancelPending } = useWaitlistSignup(onClose);
+  const close = () => {
+    // AnimatePresence keeps us mounted during exit; cancel before it starts.
+    cancelPending();
+    onClose();
+  };
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -29,7 +34,7 @@ export default function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
       ref={dialogRef}
       aria-labelledby="waitlist-dialog-title"
       aria-describedby="waitlist-dialog-description"
-      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onCancel={(event) => { event.preventDefault(); close(); }}
       initial={{ opacity: 0, scale: 0.9, rotate: -2, y: 40 }}
       animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -41,11 +46,11 @@ export default function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      onClick={(event) => { if (event.target === event.currentTarget) close(); }}
       className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-[460px] max-h-[90dvh] overflow-y-auto rounded-3xl p-0 bg-white text-ink shadow-[0_24px_80px_rgba(0,0,0,0.2)] border-l-[3px] border-l-sage backdrop:bg-ink/60 backdrop:backdrop-blur-sm"
     >
       <div className="relative p-8 md:p-10">
-        <button type="button" onClick={onClose} aria-label="Close waitlist dialog" className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/[0.04] flex items-center justify-center text-ink/40 hover:text-ink hover:bg-black/[0.08] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-sage">
+        <button type="button" onClick={close} aria-label="Close waitlist dialog" className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/[0.04] flex items-center justify-center text-ink/40 hover:text-ink hover:bg-black/[0.08] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-sage">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />

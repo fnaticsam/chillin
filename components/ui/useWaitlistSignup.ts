@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -13,10 +13,12 @@ export function useWaitlistSignup(onSuccess?: () => void) {
   const [errorMsg, setErrorMsg] = useState("");
   const request = useRef<AbortController | null>(null);
   const redirect = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
+  const cancelPending = useCallback(() => {
     request.current?.abort();
-    if (redirect.current) clearTimeout(redirect.current);
+    if (redirect.current !== null) clearTimeout(redirect.current);
+    redirect.current = null;
   }, []);
+  useEffect(() => cancelPending, [cancelPending]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -49,5 +51,5 @@ export function useWaitlistSignup(onSuccess?: () => void) {
       }
     } finally { request.current = null; }
   }
-  return { email, setEmail, status, setStatus, errorMsg, setErrorMsg, handleSubmit };
+  return { email, setEmail, status, setStatus, errorMsg, setErrorMsg, handleSubmit, cancelPending };
 }

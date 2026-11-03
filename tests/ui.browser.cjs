@@ -19,6 +19,92 @@ async function pageFor(handler) {
 }
 const respond=(req,data,status=200)=>req.respond({status,contentType:'application/json',body:JSON.stringify(data)});
 
+async function controlSignupClock(page) {
+  await page.evaluate(() => {
+    const schedule = window.setTimeout.bind(window), cancel = window.clearTimeout.bind(window);
+    const timers = new Map();
+    let now = 0, nextId = -1;
+    window.signupCallbacks = 0;
+    window.setTimeout = (callback, delay, ...args) => {
+      if (delay !== 800) return schedule(callback, delay, ...args);
+      const id = nextId--;
+      timers.set(id, { at: now + delay, run: () => callback(...args) });
+      return id;
+    };
+    window.clearTimeout = id => { if (!timers.delete(id)) cancel(id); };
+    window.advanceSignupClock = elapsed => {
+      now += elapsed;
+      for (const [id, timer] of timers) if (timer.at <= now) {
+        timers.delete(id);
+        window.signupCallbacks++;
+        timer.run();
+      }
+    };
+    window.pendingSignups = () => timers.size;
+  });
+}
+
+test('hero errors meet AA contrast on cream and footer errors keep coral on ink', async () => {
+  const page = await pageFor(req => respond(req, { error: 'Please try again shortly.' }, 429));
+  try {
+    await page.goto(base);
+    for (const [input, button, error, background] of [
+      ['#hero-email', '#hero form button', '#hero-email-error', '#hero'],
+      ['#waitlist-email', '#waitlist form button', '#waitlist-email-error', '#waitlist'],
+    ]) {
+      await page.type(input, 'contrast@example.com');
+      await page.click(button);
+      await page.waitForSelector(error);
+      await page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).opacity === '1', {}, error);
+      const colors = await page.evaluate((error, background) => ({
+        text: getComputedStyle(document.querySelector(error)).color,
+        background: getComputedStyle(document.querySelector(background)).backgroundColor,
+      }), error, background);
+      assert.equal(colors.text, error === '#hero-email-error' ? 'rgb(173, 73, 51)' : 'rgb(212, 101, 74)');
+      assert.equal(colors.background, error === '#hero-email-error' ? 'rgb(243, 240, 232)' : 'rgb(13, 13, 26)');
+      const luminance = rgb => rgb.match(/\d+/g).map(Number).map(v => {
+        const channel = v / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const values = [luminance(colors.text), luminance(colors.background)].sort((a, b) => b - a);
+      assert.ok((values[0] + 0.05) / (values[1] + 0.05) >= 4.5);
+    }
+  } finally { await page.close(); }
+});
+
+test('every modal dismissal cancels a 600ms-old success before its animated exit', async () => {
+  for (const dismissal of ['button', 'cancel', 'backdrop']) {
+    const page = await pageFor(req => respond(req, { refCode: 'BCDEFGHJ' }, 201));
+    try {
+      await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+      await page.goto(base);
+      await page.click('nav button');
+      await page.waitForSelector('dialog[open]');
+      await page.waitForFunction(() => getComputedStyle(document.querySelector('dialog')).opacity === '1');
+      await controlSignupClock(page);
+      await page.type('#modal-email', 'dismiss@example.com');
+      await page.click('dialog button[type=submit]');
+      await page.waitForSelector('dialog [role="status"]');
+      assert.equal(await page.evaluate(() => window.pendingSignups()), 1);
+      const result = await page.evaluate(dismissal => {
+        window.advanceSignupClock(600);
+        const dialog = document.querySelector('dialog');
+        if (dismissal === 'button') dialog.querySelector('button[aria-label="Close waitlist dialog"]').click();
+        else if (dismissal === 'cancel') dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+        else dialog.click();
+        window.advanceSignupClock(200);
+        return { open: dialog.open, pending: window.pendingSignups(), callbacks: window.signupCallbacks };
+      }, dismissal);
+      assert.deepEqual(result, { open: true, pending: 0, callbacks: 0 }, dismissal);
+      await page.waitForFunction(() => !document.querySelector('dialog'));
+      assert.equal(new URL(page.url()).pathname, '/');
+      await page.click('nav button');
+      await page.waitForSelector('dialog[open] #modal-email');
+      assert.equal(await page.$eval('#modal-email', el => el.value), '');
+    } finally { await page.close(); }
+  }
+});
+
 test('reduced-motion counters hydrate without recoverable errors and show their final values',async()=>{
   const page=await pageFor(req=>respond(req,{}));
   // Next forwards React onRecoverableError to reportError (or console.error).

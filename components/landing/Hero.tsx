@@ -212,7 +212,7 @@ export default function Hero() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="absolute -bottom-8 left-0 right-0 text-sm text-coral font-medium"
+                className="absolute -bottom-8 left-0 right-0 text-sm text-coral-dark font-medium"
               >
                 {errorMsg}
               </motion.p>
