@@ -32,3 +32,25 @@ Before any separately authorized rollout: validate the batch guard against a non
 Denied action: `gh api repos/fnaticsam/chillin/actions/workflows`, targeting workflow-definition metadata, returned **Forbidden**. Execution was denied, not pending or uncertain. It was not retried or retrieved by another route. Source review, fixes, PR creation and distinct commit-scoped CI/job checks proceeded through authorized access. Hosted browser system-package installation failed for missing root privileges; no privilege escalation was attempted, and that operation was removed in favor of existing libraries.
 
 No mounted Fleet/Sam ID files, credentials, live databases or production endpoints were changed. No specialist output was requested or recovered, and no external agents were contacted.
+
+## Follow-up review — 2026-11-03
+
+The sections above preserve the October 22 validation record. This follow-up supersedes their description of the braces advisory as currently active: GitHub [withdrew GHSA-vfj7-8cjw-p6xm on October 23](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). No dependency-audit exception or suppression has been introduced. A fresh registry audit and hosted run are still required; withdrawal alone is not evidence that the entire current dependency graph passes.
+
+Read-only GitHub checks for published PR head `698a8a53b7065b86a8ef7c96fb1fc3eb62ec72a1` confirm [run 39792272093](https://github.com/fnaticsam/chillin/actions/runs/39792272093): quality succeeded, dependency-audit failed. There is no new published head or new run from this follow-up.
+
+Local changes keep push checks running to completion, cancel superseded runs only for pull requests, and add full checks on main pushes. API tests now use a controlled clock, including minute-boundary burst recovery and UTC-midnight quota reset; they cannot accidentally cross a real minute or date boundary during execution.
+
+On ai-mac with Node 24.20.0, all 14 API tests and the particle lifecycle test passed, as did `git diff --check`. The exact locked TypeScript tarball was recovered from the host's npm cache to run these isolated tests. A complete `npm ci --ignore-scripts` could not finish: registry DNS is unavailable and 26 non-optional locked packages are absent from the local cache. Lint, typecheck and build scripts consequently cannot start their tools; the fresh dependency audit also fails to reach the registry. Production render and browser tests remain unverified locally. No headless browser suite was run on ai-mac.
+
+The mirrored worktree is detached at transport snapshot `e8d4ce92d7980690be37ce86519004ad87122efc`, whose tree matches the published PR head. Mirrored main has one newer commit, `8052b9309e1372ab738d28dee6d8b8c8fa8a97a6`; a read-only merge preview finds package manifest/lockfile conflicts. No merge, commit, push, PR metadata update or deployment was performed, as required by this follow-up's final instruction. Any eventual merge must preserve main's newer dependency/security behavior and regenerate and verify the lockfile with registry access.
+
+A read-only independent API review found no further concrete code defect, conditional on the provider's batch guarantees. The [provider batch reference](https://vercel.com/docs/rest-api/global-config/update-global-config-items-in-batch) lists batch operations but does not establish the atomicity and concurrent-create guarantees modeled by these unit tests. The rollout gate remains open; mocks are not provider integration evidence.
+
+Before rollout, use a separately authorized, empty non-production provider fixture and synthetic addresses to establish all of the following:
+
+- A batch containing a conflicting create leaves every item unchanged, including counter, budget and referral increments. Test conflicts in each create position, not only the first item.
+- Concurrent batches creating the same position marker permit exactly one whole batch to commit; losing batches leave no partial email or referral records.
+- Parallel signups, duplicate retries and quota exhaustion against the provider satisfy the same invariants as the local tests. Keep the fixture isolated from production and retain the results before changing rollout status.
+
+The fixture requires approved non-production access; none was requested or used here. Old-writer shutdown, acceptance of the 1,000/day ceiling and ASCII email policy, historical reconciliation, and membership-disclosure/retention/bot-protection decisions remain the rollout prerequisites listed above. Follow-up owner: fnaticsam; recheck the outstanding access, integration and fresh-CI gates by 2026-11-10. This PR is not ready to ship on the evidence available in this run.

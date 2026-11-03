@@ -2,12 +2,12 @@ name: Checks
 on:
   pull_request:
   push:
-    branches: ["codex/chillin-*"]
+    branches: ["main", "codex/chillin-*"]
 permissions:
   contents: read
 concurrency:
   group: checks-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   quality:
     runs-on: ubuntu-latest

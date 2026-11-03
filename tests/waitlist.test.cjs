@@ -4,15 +4,22 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 const crypto = require('node:crypto');
+const TEST_NOW = Date.parse('2026-11-03T12:00:00.000Z');
+const TEST_DAY = new Date(TEST_NOW).toISOString().slice(0,10);
 
 const source = fs.readFileSync('app/api/waitlist/route.ts', 'utf8');
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 function harness(initial = {}, options = {}) {
   let uncertain = options.uncertainPatch;
+  let now = options.now ?? TEST_NOW;
+  class Clock extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+    static now() { return now; }
+  }
   const values = new Map(Object.entries(initial)); const logs = []; const batches = []; const calls = []; const exports = {};
   const sdk = { get: async key => values.get(key), getAll: async keys => Object.fromEntries(keys.map(key => [key, values.get(key)])) };
   vm.runInNewContext(code, {
-    exports, Buffer, URL, AbortSignal, Uint8Array, Date,
+    exports, Buffer, URL, AbortSignal, Uint8Array, Date: Clock,
     process: { env: { EDGE_CONFIG_ID: 'test-store', VERCEL_API_TOKEN: 'test-only' } },
     console: { log: (...v) => logs.push(v), error: (...v) => logs.push(v) },
     require: name => name === 'next/server' ? { NextResponse: Response } : name === '@vercel/edge-config' ? { createClient: () => sdk } : options.crypto ?? crypto,
@@ -36,7 +43,7 @@ function harness(initial = {}, options = {}) {
     const req=new Request('https://local.test/api/waitlist',{method:'POST',headers:{'content-type':'application/json',...extra.headers},body:typeof body==='string'?body:JSON.stringify(body)});
     req.nextUrl=new URL(req.url); return req;
   }
-  return { values,logs,batches,calls,post:(body,extra)=>exports.POST(request(body,extra)),get:ref=>{const req={nextUrl:new URL('https://local.test/api/waitlist'+(ref===undefined?'':`?ref=${encodeURIComponent(ref)}`))};return exports.GET(req);} };
+  return { values,logs,batches,calls,advance:ms=>{now+=ms;},post:(body,extra)=>exports.POST(request(body,extra)),get:ref=>{const req={nextUrl:new URL('https://local.test/api/waitlist'+(ref===undefined?'':`?ref=${encodeURIComponent(ref)}`))};return exports.GET(req);} };
 }
 
 test('rejects malformed JSON/types/addresses/referrals without storage access', async()=>{
@@ -84,7 +91,7 @@ test('unknown referral and corrupt counters cannot mutate storage',async()=>{
   const corrupt=harness({counter:'2'});assert.equal((await corrupt.post({email:'a@example.com'})).status,503);assert.equal(corrupt.batches.length,0);
 });
 test('global budget and instance bursts return 429 with retry guidance',async()=>{
-  const h=harness({waitlist_write_budget:{day:new Date().toISOString().slice(0,10),count:1000}});
+  const h=harness({waitlist_write_budget:{day:TEST_DAY,count:1000}});
   const limited=await h.post({email:'a@example.com'});assert.equal(limited.status,429);assert.equal(limited.headers.get('retry-after'),'60');assert.equal(h.batches.length,0);
   const burst=harness();for(let i=0;i<30;i++) await burst.post(null);assert.equal((await burst.post(null)).status,429);
 });
@@ -103,7 +110,29 @@ test('an uncertain upstream write is not retried internally and a client retry i
   assert.equal(h.values.get('counter'),1);assert.equal(h.batches.length,1);assert.ok(!JSON.stringify(h.logs).includes('@'));
 });
 test('simultaneous signups cannot exceed the global successful-write budget',async()=>{
-  const h=harness({waitlist_write_budget:{day:new Date().toISOString().slice(0,10),count:999}});
+  const h=harness({waitlist_write_budget:{day:TEST_DAY,count:999}});
   const responses=await Promise.all([h.post({email:'a@example.com'}),h.post({email:'b@example.com'})]);
   assert.deepEqual(responses.map(r=>r.status).sort(),[201,429]);assert.equal(h.values.get('counter'),1);assert.equal(h.values.get('waitlist_write_budget').count,1000);
+});
+
+test('read and write bursts recover at the next minute without waiting',async()=>{
+  const h=harness();
+  for(let i=0;i<30;i++) assert.equal((await h.post(null)).status,400);
+  assert.equal((await h.post(null)).status,429);
+  for(let i=0;i<300;i++) assert.equal((await h.get()).status,200);
+  assert.equal((await h.get()).status,429);
+  h.advance(60_000);
+  assert.equal((await h.post({email:'new@example.com'})).status,201);
+  assert.equal((await h.get()).status,200);
+});
+
+test('daily quota resets at UTC midnight while positions keep increasing',async()=>{
+  const h=harness({counter:7,waitlist_write_budget:{day:TEST_DAY,count:1000}},{now:Date.parse(`${TEST_DAY}T23:59:59.999Z`)});
+  assert.equal((await h.post({email:'new@example.com'})).status,429);
+  assert.equal(h.batches.length,0);
+  h.advance(1);
+  const response=await h.post({email:'new@example.com'});
+  assert.equal(response.status,201);assert.equal((await response.json()).position,8);
+  assert.equal(h.values.get('waitlist_write_budget').day,'2026-11-04');
+  assert.equal(h.values.get('waitlist_write_budget').count,1);
 });
