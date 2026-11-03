@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChillinLogo from "@/components/ui/ChillinLogo";
 import { useWaitlistModal } from "./WaitlistProvider";
 
@@ -8,7 +8,7 @@ export default function Navbar() {
   const { openWaitlistModal } = useWaitlistModal();
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const [lastScroll, setLastScroll] = useState(0);
+  const lastScroll = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,18 +16,18 @@ export default function Navbar() {
 
       setScrolled(y > 80);
 
-      if (y - lastScroll > 8 && y > 200) {
+      if (y - lastScroll.current > 8 && y > 200) {
         setHidden(true);
-      } else if (lastScroll - y > 8) {
+      } else if (lastScroll.current - y > 8) {
         setHidden(false);
       }
 
-      setLastScroll(y);
+      lastScroll.current = y;
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  });
+  }, []);
 
   const scrollToSection = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -36,7 +36,7 @@ export default function Navbar() {
     e.preventDefault();
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
     }
   };
 
@@ -48,7 +48,7 @@ export default function Navbar() {
             ? "py-3 bg-cream/85 backdrop-blur-[20px] backdrop-saturate-[1.4] shadow-[0_1px_30px_rgba(0,0,0,0.06)]"
             : "py-5 bg-transparent"
         }
-        ${hidden ? "-translate-y-full" : "translate-y-0"}
+        ${hidden ? "-translate-y-full focus-within:translate-y-0" : "translate-y-0"}
       `}
     >
       <div className="max-w-[1200px] mx-auto px-8 md:px-12 flex items-center justify-between">

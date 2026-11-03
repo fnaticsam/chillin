@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { AnimatePresence } from "framer-motion";
 import WaitlistModal from "./WaitlistModal";
 
 interface WaitlistContextValue {
@@ -24,7 +25,9 @@ export default function WaitlistProvider({ children }: { children: ReactNode }) 
   return (
     <WaitlistContext.Provider value={{ openWaitlistModal }}>
       {children}
-      <WaitlistModal isOpen={isOpen} onClose={closeWaitlistModal} />
+      <AnimatePresence>
+        {isOpen && <WaitlistModal isOpen={isOpen} onClose={closeWaitlistModal} />}
+      </AnimatePresence>
     </WaitlistContext.Provider>
   );
 }

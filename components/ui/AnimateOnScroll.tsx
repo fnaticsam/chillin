@@ -15,9 +15,9 @@ interface AnimateOnScrollProps {
   as?: "div" | "section" | "p" | "h1" | "h2" | "h3" | "h4" | "span" | "li";
 }
 
-const defaultVariants: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0 },
+const motionElements = {
+  div: motion.div, section: motion.section, p: motion.p, h1: motion.h1,
+  h2: motion.h2, h3: motion.h3, h4: motion.h4, span: motion.span, li: motion.li,
 };
 
 export default function AnimateOnScroll({
@@ -31,7 +31,7 @@ export default function AnimateOnScroll({
   amount = 0.15,
   as = "div",
 }: AnimateOnScrollProps) {
-  const Component = motion.create(as);
+  const Component = motionElements[as];
 
   const variants: Variants = {
     hidden: { opacity: 0, y, x },
