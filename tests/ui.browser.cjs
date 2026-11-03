@@ -26,6 +26,14 @@ test('hero retains invite attribution and redirects after successful subscriptio
   await page.waitForFunction(()=>location.pathname==='/waitlist');
   assert.deepEqual(bodies[0],{email:'hero@example.com',ref:'ABCDEFGH'});assert.match(page.url(),/ref=BCDEFGHJ/);await page.close();
 });
+test('footer signup retains invite attribution and redirects after success',async()=>{
+  const bodies=[];const page=await pageFor(req=>{if(req.method()==='POST') bodies.push(JSON.parse(req.postData()));return respond(req,{refCode:'BCDEFGHJ',position:2,total:2},201);});
+  await page.goto(`${base}/?ref=ABCDEFGH`);await page.waitForSelector('#waitlist-email');
+  await page.$eval('#waitlist-email',el=>el.scrollIntoView());
+  await page.type('#waitlist-email','footer@example.com');await page.click('#waitlist form button[type=submit]');
+  await page.waitForFunction(()=>location.pathname==='/waitlist');
+  assert.deepEqual(bodies[0],{email:'footer@example.com',ref:'ABCDEFGH'});assert.match(page.url(),/ref=BCDEFGHJ/);await page.close();
+});
 test('modal contains keyboard focus, exposes errors and restores the trigger on Escape',async()=>{
   const bodies=[];const page=await pageFor(req=>{bodies.push(JSON.parse(req.postData()));return respond(req,{error:'Please try again shortly.'},429);});
   await page.goto(`${base}/?ref=ABCDEFGH`);await page.waitForSelector('nav button');
