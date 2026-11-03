@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import ChillinLogo from "@/components/ui/ChillinLogo";
 
 /* ── Types ── */
@@ -123,12 +124,12 @@ function WaitlistDetails({ referralCode: ref }: { referralCode: string | null })
             Hmm, something&apos;s off
           </h1>
           <p className="text-paper/50 mb-8">{error}</p>
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-cream text-ink font-semibold transition-all duration-300 hover:-translate-y-0.5"
           >
             Back to home
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -139,15 +140,15 @@ function WaitlistDetails({ referralCode: ref }: { referralCode: string | null })
       {/* ── Nav ── */}
       <nav className="py-5 px-8 md:px-12">
         <div className="max-w-[900px] mx-auto flex items-center justify-between">
-          <a href="/">
+          <Link href="/">
             <ChillinLogo />
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="text-sm text-paper/40 hover:text-paper transition-colors duration-200"
           >
             Back to home
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -210,39 +211,25 @@ function WaitlistDetails({ referralCode: ref }: { referralCode: string | null })
           </div>
         </motion.div>
 
-        {/* ── Boost Section ── */}
+        {/* ── Invite Section ── */}
         <motion.div variants={itemVariants} className="mb-6">
           <h2 className="font-serif text-2xl font-bold text-paper mb-2 text-center">
             Share the waitlist
           </h2>
           <p className="text-sm text-paper/40 text-center mb-8">
-            Invite friends who might like Chillin. Your signup position stays the same.
+            Your signup position stays the same.
           </p>
         </motion.div>
 
         {/* ── Referral Card (primary) ── */}
         <motion.div variants={itemVariants} className="mb-4">
           <div className="rounded-2xl bg-sage/[0.12] border border-sage/20 p-6 md:p-7">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
-              <div>
-                <h3 className="font-serif text-lg font-bold text-paper mb-1">
-                  Invite your friends
-                </h3>
-                <p className="text-sm text-paper/45">
-                  Share your link to track signups from friends.
-                </p>
-              </div>
-              <div className="text-sm font-semibold text-sage whitespace-nowrap">
-                Invite link
-              </div>
-            </div>
-
             {/* Referral link + copy */}
             <div className="flex items-center gap-2">
               <input aria-label="Your invite link" readOnly value={referralLink} className="min-w-0 flex-1 px-4 py-3 rounded-xl bg-ink/40 border border-paper/[0.08] text-sm text-paper/80 font-mono" />
               <button
                 onClick={copyLink}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-paper text-sm font-semibold transition-all duration-300 hover:bg-sage-dark hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(74,107,90,0.3)] whitespace-nowrap"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-paper text-sm font-semibold transition-all duration-300 hover:bg-sage-dark hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(74,107,90,0.3)] focus-visible:outline-2 focus-visible:outline-paper whitespace-nowrap"
               >
                 <AnimatePresence mode="wait">
                   {copied ? (
@@ -277,7 +264,8 @@ function WaitlistDetails({ referralCode: ref }: { referralCode: string | null })
               </button>
             </div>
 
-            <p role="status" className="text-sm mt-3 text-paper/80">{copied ? "Invite link copied." : copyError}</p>
+            <p role="status" className="sr-only">{copied ? "Invite link copied." : ""}</p>
+            {copyError && <p role="alert" className="text-sm mt-3 text-coral">{copyError}</p>}
 
             {/* Referral count */}
             {data.referralCount > 0 && (
@@ -290,9 +278,7 @@ function WaitlistDetails({ referralCode: ref }: { referralCode: string | null })
 
         {/* ── Footer note ── */}
         <motion.div variants={itemVariants} className="mt-12 text-center">
-          <p className="text-xs text-paper/25 leading-relaxed">
-            Invites are counted when a friend joins the waitlist.
-            <br />
+          <p className="text-xs text-paper/50 leading-relaxed">
             Founding members get 50% off for life. We mean it.
           </p>
         </motion.div>

@@ -43,7 +43,12 @@ function CountUp({
   const [display, setDisplay] = useState("0" + suffix);
 
   useEffect(() => {
-    if (!inView || reduceMotion) return;
+    // Keep SSR and hydration identical; apply the preference after mounting.
+    if (reduceMotion) {
+      setDisplay(end.toFixed(decimals) + suffix);
+      return;
+    }
+    if (!inView) return;
     let frame = 0;
     const timeout = setTimeout(() => {
       const start = performance.now();
@@ -61,7 +66,7 @@ function CountUp({
     return () => { clearTimeout(timeout); cancelAnimationFrame(frame); };
   }, [inView, end, suffix, decimals, duration, delay, reduceMotion]);
 
-  return <span ref={ref}>{reduceMotion ? end.toFixed(decimals) + suffix : display}</span>;
+  return <span ref={ref}>{display}</span>;
 }
 
 /* ─── per-stat stagger variants ─── */
