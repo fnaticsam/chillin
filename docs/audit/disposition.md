@@ -52,5 +52,14 @@ Before rollout, use a separately authorized, empty non-production provider fixtu
 - A batch containing a conflicting create leaves every item unchanged, including counter, budget and referral increments. Test conflicts in each create position, not only the first item.
 - Concurrent batches creating the same position marker permit exactly one whole batch to commit; losing batches leave no partial email or referral records.
 - Parallel signups, duplicate retries and quota exhaustion against the provider satisfy the same invariants as the local tests. Keep the fixture isolated from production and retain the results before changing rollout status.
+- Record the actual create-conflict HTTP status and error envelope. The route retries only explicit HTTP 409 conflicts; HTTP 400 responses fail immediately, including any as-yet-unverified provider conflict variant. Do not broaden retries to all HTTP 400 responses.
 
 The fixture requires approved non-production access; none was requested or used here. Old-writer shutdown, acceptance of the 1,000/day ceiling and ASCII email policy, historical reconciliation, and membership-disclosure/retention/bot-protection decisions remain the rollout prerequisites listed above. Follow-up owner: fnaticsam; recheck the outstanding access, integration and fresh-CI gates by 2026-11-10. This PR is not ready to ship on the evidence available in this run.
+
+## Review fixes — ai-box, 2026-11-03
+
+Permanent or unrecognized HTTP 400 write failures now stop after one batch and use the generic storage-failure response instead of exhausting contention retries and reporting a busy waitlist. Regression tests cover validation errors containing private details, malformed/non-object error bodies, no additional reads or writes after rejection, unchanged storage, sanitized logs and the four-attempt HTTP 409 limit. The new HTTP 400 regression failed against the previous route before the fix.
+
+The provider integration gate remains **blocking and not fixed**: this task supplied no approved empty non-production fixture or credentials. No provider write or new external access was attempted. Local storage mocks deliberately model the required guarantees and cannot establish provider behavior. The separately authorized integration run above is still required before approval or rollout.
+
+Local verification on ai-box (Node 24.20.0): clean dependency install, all 18 tests (16 API plus particle lifecycle and production-page smoke tests), repository lint, TypeScript, unmodified production build, test-file syntax and whitespace checks passed. No font mocks, added retries or extended timeouts were used. Edits remain uncommitted; nothing was pushed, merged or deployed.

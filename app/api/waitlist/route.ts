@@ -158,9 +158,9 @@ export async function POST(req: NextRequest) {
       if (ref) items.push({ operation: "upsert", key: `referrals_${ref}`, value: referralCount + 1 });
       const res = await management("items", { method: "PATCH", body: JSON.stringify({ items }) });
       if (res.ok) return json({ message: "Welcome to the founding crew!", position, refCode, total: position }, 201);
-      // Vercel rejects the entire batch if a create already exists. Never retry a
-      // transport error/5xx: its write outcome may be uncertain. Client retries are idempotent.
-      if (res.status !== 400 && res.status !== 409) throw new Error("Storage write failed");
+      // Only retry an explicit HTTP conflict. A 400 can be a permanent validation
+      // failure; transport errors/5xx may have committed. Client retries are idempotent.
+      if (res.status !== 409) throw new Error("Storage write failed");
     }
     throw new PublicError(503, "The waitlist is busy. Please try again shortly.");
   } catch (error) { return failure(error); }

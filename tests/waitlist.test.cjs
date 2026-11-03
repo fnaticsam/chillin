@@ -32,7 +32,8 @@ function harness(initial = {}, options = {}) {
         return values.has(key) ? Response.json({ value: values.get(key) }) : new Response('',{status:404});
       }
       const { items } = JSON.parse(init.body); batches.push(items);
-      // Model the documented all-or-nothing batch and create uniqueness semantics.
+      if (options.patchFailure) return new Response(options.patchFailure.body, {status:options.patchFailure.status});
+      // Model the required batch/uniqueness guarantees; provider integration is still a rollout gate.
       if (items.some(item => item.operation === 'create' && values.has(item.key))) return new Response('',{status:409});
       for (const item of items) values.set(item.key,item.value);
       if (uncertain) { uncertain=false; return new Response('private@example.com', {status:500}); }
@@ -108,6 +109,26 @@ test('an uncertain upstream write is not retried internally and a client retry i
   assert.equal((await h.post({email:'a@example.com'})).status,503);assert.equal(h.batches.length,1);
   const retry=await h.post({email:'a@example.com'});assert.equal(retry.status,200);assert.equal((await retry.json()).alreadyExists,true);
   assert.equal(h.values.get('counter'),1);assert.equal(h.batches.length,1);assert.ok(!JSON.stringify(h.logs).includes('@'));
+});
+test('permanent or unrecognized upstream 400 errors fail once without disclosing details',async()=>{
+  for (const body of [JSON.stringify({error:{code:'validation_error',message:'private@example.com secret token'}}), 'not JSON', 'null']) {
+    const h=harness({}, {patchFailure:{status:400,body}});
+    const response=await h.post({email:'private@example.com'});
+    assert.equal(response.status,503);
+    assert.deepEqual(await response.json(),{error:'The waitlist is temporarily unavailable. Please try again.'});
+    assert.equal(h.batches.length,1);
+    assert.equal(h.calls.at(-1).init.method,'PATCH');
+    assert.equal(h.values.size,0);
+    assert.deepEqual(h.logs,[['[Waitlist] Storage request failed']]);
+  }
+});
+test('recognized HTTP 409 conflicts have a bounded retry budget',async()=>{
+  const h=harness({}, {patchFailure:{status:409,body:''}});
+  const response=await h.post({email:'a@example.com'});
+  assert.equal(response.status,503);
+  assert.deepEqual(await response.json(),{error:'The waitlist is busy. Please try again shortly.'});
+  assert.equal(h.batches.length,4);
+  assert.equal(h.values.size,0);
 });
 test('simultaneous signups cannot exceed the global successful-write budget',async()=>{
   const h=harness({waitlist_write_budget:{day:TEST_DAY,count:999}});
