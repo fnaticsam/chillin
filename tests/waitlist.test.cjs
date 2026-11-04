@@ -84,6 +84,8 @@ test('concurrent new signups and referrals have unique positions and no lost inc
 test('concurrent duplicate signup commits once',async()=>{
   const h=harness();const result=await Promise.all([h.post({email:'a@example.com'}),h.post({email:'a@example.com'})]);
   assert.deepEqual(result.map(r=>r.status).sort(),[200,201]);assert.equal(h.values.get('counter'),1);
+  // Both responses report the committed total, never a total below the position.
+  for (const body of await Promise.all(result.map(r=>r.json()))) { assert.equal(body.position,1); assert.equal(body.total,1); }
 });
 test('random-code collision retries without overwriting prior entry',async()=>{
   let n=0;const code='a'.repeat(32);const old={email:'old@example.com',refCode:code,position:1};
@@ -97,7 +99,9 @@ test('unknown referral and corrupt counters cannot mutate storage',async()=>{
 test('global budget and instance bursts return 429 with retry guidance',async()=>{
   const h=harness({waitlist_write_budget:{day:TEST_DAY,count:1000}});
   const limited=await h.post({email:'a@example.com'});assert.equal(limited.status,429);assert.equal(limited.headers.get('retry-after'),'60');assert.equal(h.batches.length,0);
-  const burst=harness();for(let i=0;i<30;i++) await burst.post(null);assert.equal((await burst.post(null)).status,429);
+  const burst=harness();for(let i=0;i<30;i++) assert.equal((await burst.post({email:`u${i}@example.com`})).status,201);assert.equal((await burst.post({email:'late@example.com'})).status,429);
+  // Malformed requests never reach storage and do not consume the write allowance.
+  const malformed=harness();for(let i=0;i<40;i++) assert.equal((await malformed.post(null)).status,400);assert.equal((await malformed.post({email:'ok@example.com'})).status,201);
 });
 test('errors and public reads never include raw emails or upstream details',async()=>{
   const h=harness({counter:1,ref_ABCDEFGH:{email:'private@example.com',refCode:'ABCDEFGH',position:1}});
@@ -150,8 +154,8 @@ test('simultaneous signups cannot exceed the global successful-write budget',asy
 
 test('read and write bursts recover at the next minute without waiting',async()=>{
   const h=harness();
-  for(let i=0;i<30;i++) assert.equal((await h.post(null)).status,400);
-  assert.equal((await h.post(null)).status,429);
+  for(let i=0;i<30;i++) assert.equal((await h.post({email:`u${i}@example.com`})).status,201);
+  assert.equal((await h.post({email:'late@example.com'})).status,429);
   for(let i=0;i<300;i++) assert.equal((await h.get()).status,200);
   assert.equal((await h.get()).status,429);
   h.advance(60_000);
