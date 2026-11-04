@@ -1,0 +1,171 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+const crypto = require('node:crypto');
+const TEST_NOW = Date.parse('2026-11-03T12:00:00.000Z');
+const TEST_DAY = new Date(TEST_NOW).toISOString().slice(0,10);
+const sha = email => crypto.createHash('sha256').update(email).digest('hex');
+
+const source = fs.readFileSync('app/api/waitlist/route.ts', 'utf8');
+const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+function harness(initial = {}, options = {}) {
+  let uncertain = options.uncertainPatch;
+  let now = options.now ?? TEST_NOW;
+  class Clock extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+    static now() { return now; }
+  }
+  const values = new Map(Object.entries(initial)); const logs = []; const batches = []; const calls = []; const exports = {};
+  const sdk = { get: async key => values.get(key), getAll: async keys => Object.fromEntries(keys.map(key => [key, values.get(key)])) };
+  vm.runInNewContext(code, {
+    exports, Buffer, URL, AbortSignal, Uint8Array, Date: Clock,
+    process: { env: { EDGE_CONFIG_ID: 'test-store', VERCEL_API_TOKEN: 'test-only' } },
+    console: { log: (...v) => logs.push(v), error: (...v) => logs.push(v) },
+    require: name => name === 'next/server' ? { NextResponse: Response } : name === '@vercel/edge-config' ? { createClient: () => sdk } : options.crypto ?? crypto,
+    fetch: async (url, init) => {
+      calls.push({url:String(url),init});
+      if (options.fail) return new Response('private@example.com secret token', {status:500});
+      const path = url.pathname.split('/');
+      if (init.method !== 'PATCH') {
+        const key = decodeURIComponent(path.at(-1));
+        return values.has(key) ? Response.json({ value: values.get(key) }) : new Response('',{status:404});
+      }
+      const { items } = JSON.parse(init.body); batches.push(items);
+      if (options.patchFailure) return new Response(options.patchFailure.body, {status:options.patchFailure.status});
+      // Model the required batch/uniqueness guarantees; provider integration is still a rollout gate.
+      if (items.some(item => item.operation === 'create' && values.has(item.key))) return new Response('',{status:options.collisionStatus ?? 409});
+      for (const item of items) values.set(item.key,item.value);
+      if (uncertain) { uncertain=false; return new Response('private@example.com', {status:500}); }
+      return Response.json({status:'ok'});
+    },
+  });
+  function request(body, extra={}) {
+    const req=new Request('https://local.test/api/waitlist',{method:'POST',headers:{'content-type':'application/json',...extra.headers},body:typeof body==='string'?body:JSON.stringify(body)});
+    req.nextUrl=new URL(req.url); return req;
+  }
+  return { values,logs,batches,calls,advance:ms=>{now+=ms;},post:(body,extra)=>exports.POST(request(body,extra)),get:ref=>{const req={nextUrl:new URL('https://local.test/api/waitlist'+(ref===undefined?'':`?ref=${encodeURIComponent(ref)}`))};return exports.GET(req);} };
+}
+
+test('rejects malformed JSON/types/addresses/referrals without storage access', async()=>{
+  for (const body of ['{',null,[],{email:123},{email:'@.'},{email:'a..b@example.com'},{email:'a@b..com'},{email:'a@example.com\nInjected'},{email:'a@example.com',ref:{}},{email:'a@example.com',ref:'unknown'}]) {
+    const h=harness();assert.equal((await h.post(body)).status,400);assert.equal(h.calls.length,0);
+  }
+});
+test('bounds streamed and declared bodies and rejects unsupported content types/origins',async()=>{
+  const h=harness();assert.equal((await h.post(' '.repeat(2049))).status,413);
+  assert.equal((await h.post({email:'a@example.com'},{headers:{'content-length':'2049'}})).status,413);
+  assert.equal((await h.post({email:'a@example.com'},{headers:{'content-type':'text/plain'}})).status,415);
+  assert.equal((await h.post({email:'a@example.com'},{headers:{origin:'https://other.test'}})).status,403);
+  assert.equal(h.calls.length,0);
+  // Media types are case-insensitive (RFC 9110).
+  assert.equal((await harness().post({email:'a@example.com'},{headers:{'content-type':'Application/JSON; charset=utf-8'}})).status,201);
+});
+test('different punctuation creates distinct keys and normalized duplicates are idempotent',async()=>{
+  const h=harness();const a=await h.post({email:'a.b@example.com'});const b=await h.post({email:'a+b@example.com'});
+  assert.equal(a.status,201);assert.equal(b.status,201);assert.equal(h.values.get('counter'),2);
+  const duplicate=await (await h.post({email:' A.B@EXAMPLE.COM '})).json();assert.equal(duplicate.alreadyExists,true);assert.equal(duplicate.position,1);
+  assert.equal(h.batches.length,2);assert.equal(h.logs.length,0);
+});
+test('legacy key collisions never disclose or claim the other address record',async()=>{
+  const legacy={email:'a.b@example.com',refCode:'ABCDEFGH',position:7};const h=harness({counter:7,email_a_b_example_com:'ABCDEFGH',ref_ABCDEFGH:legacy});
+  const old=await (await h.post({email:legacy.email})).json();assert.equal(old.refCode,'ABCDEFGH');assert.equal(h.batches.length,0);
+  const collision=await h.post({email:'a+b@example.com'});assert.equal(collision.status,201);assert.equal((await collision.json()).position,8);
+  assert.deepEqual(h.values.get('ref_ABCDEFGH'),legacy);
+});
+test('concurrent new signups and referrals have unique positions and no lost increments',async()=>{
+  const h=harness({counter:1,ref_ABCDEFGH:{email:'friend@example.com',refCode:'ABCDEFGH',position:1}});
+  const results=await Promise.all([1,2,3,4].map(i=>h.post({email:`user${i}@example.com`,ref:'ABCDEFGH'})));
+  assert.deepEqual(results.map(r=>r.status),[201,201,201,201]);
+  const positions=await Promise.all(results.map(async r=>(await r.json()).position));assert.equal(new Set(positions).size,4);
+  assert.equal(h.values.get('counter'),5);assert.equal(h.values.get('referrals_ABCDEFGH'),4);
+});
+test('concurrent duplicate signup commits once',async()=>{
+  const h=harness();const result=await Promise.all([h.post({email:'a@example.com'}),h.post({email:'a@example.com'})]);
+  assert.deepEqual(result.map(r=>r.status).sort(),[200,201]);assert.equal(h.values.get('counter'),1);
+});
+test('random-code collision retries without overwriting prior entry',async()=>{
+  let n=0;const code='a'.repeat(32);const old={email:'old@example.com',refCode:code,position:1};
+  const h=harness({counter:1,[`ref_${code}`]:old},{crypto:{...crypto,randomBytes:()=>Buffer.from((n++?'b':'a').repeat(32),'hex')}});
+  assert.equal((await h.post({email:'new@example.com'})).status,201);assert.deepEqual(h.values.get(`ref_${code}`),old);assert.equal(h.values.get('counter'),2);
+});
+test('unknown referral and corrupt counters cannot mutate storage',async()=>{
+  const h=harness();assert.equal((await h.post({email:'a@example.com',ref:'ABCDEFGH'})).status,400);assert.equal(h.batches.length,0);
+  const corrupt=harness({counter:'2'});assert.equal((await corrupt.post({email:'a@example.com'})).status,503);assert.equal(corrupt.batches.length,0);
+});
+test('global budget and instance bursts return 429 with retry guidance',async()=>{
+  const h=harness({waitlist_write_budget:{day:TEST_DAY,count:1000}});
+  const limited=await h.post({email:'a@example.com'});assert.equal(limited.status,429);assert.equal(limited.headers.get('retry-after'),'60');assert.equal(h.batches.length,0);
+  const burst=harness();for(let i=0;i<30;i++) await burst.post(null);assert.equal((await burst.post(null)).status,429);
+});
+test('errors and public reads never include raw emails or upstream details',async()=>{
+  const h=harness({counter:1,ref_ABCDEFGH:{email:'private@example.com',refCode:'ABCDEFGH',position:1}});
+  const response=await h.get('ABCDEFGH');assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(JSON.stringify(await response.json()).includes('@'),false);
+  assert.equal((await h.get('bad')).status,400);assert.equal((await h.get('BCDEFGHJ')).status,404);
+  const fail=harness({}, {fail:true});const failed=await fail.post({email:'private@example.com'});assert.equal(failed.status,503);
+  assert.equal(JSON.stringify([await failed.json(),fail.logs]).includes('private@example.com'),false);
+});
+
+test('an uncertain upstream write is not retried internally and a client retry is idempotent',async()=>{
+  const h=harness({}, {uncertainPatch:true});
+  assert.equal((await h.post({email:'a@example.com'})).status,503);assert.equal(h.batches.length,1);
+  const retry=await h.post({email:'a@example.com'});assert.equal(retry.status,200);assert.equal((await retry.json()).alreadyExists,true);
+  assert.equal(h.values.get('counter'),1);assert.equal(h.batches.length,1);assert.ok(!JSON.stringify(h.logs).includes('@'));
+});
+test('permanent or unrecognized upstream 400 errors fail once without disclosing details',async()=>{
+  for (const body of [JSON.stringify({error:{code:'validation_error',message:'private@example.com secret token'}}), 'not JSON', 'null']) {
+    const h=harness({}, {patchFailure:{status:400,body}});
+    const response=await h.post({email:'private@example.com'});
+    assert.equal(response.status,503);
+    assert.deepEqual(await response.json(),{error:'The waitlist is temporarily unavailable. Please try again.'});
+    assert.equal(h.batches.length,1);
+    // After a 400 the route re-reads the create-only keys to rule out a collision, then fails once.
+    const afterPatch=h.calls.slice(h.calls.findIndex(c=>c.init.method==='PATCH')+1);
+    assert.deepEqual(afterPatch.map(c=>decodeURIComponent(c.url.split('/').at(-1).split('?')[0])),['waitlist_position_1',`email_v2_${sha('private@example.com')}`,h.batches[0][2].key]);
+    assert.equal(h.values.size,0);
+    assert.deepEqual(h.logs,[['[Waitlist] Storage request failed']]);
+  }
+});
+test('create collisions reported as 400 are confirmed by re-read and retried',async()=>{
+  const h=harness({},{collisionStatus:400});
+  const responses=await Promise.all([h.post({email:'a@example.com'}),h.post({email:'b@example.com'})]);
+  assert.deepEqual(responses.map(r=>r.status).sort(),[201,201]);
+  const positions=await Promise.all(responses.map(async r=>(await r.json()).position));
+  assert.deepEqual(positions.sort(),[1,2]);assert.equal(h.batches.length,3);assert.equal(h.values.get('counter'),2);
+});
+test('recognized HTTP 409 conflicts have a bounded retry budget',async()=>{
+  const h=harness({}, {patchFailure:{status:409,body:''}});
+  const response=await h.post({email:'a@example.com'});
+  assert.equal(response.status,503);
+  assert.deepEqual(await response.json(),{error:'The waitlist is busy. Please try again shortly.'});
+  assert.equal(h.batches.length,4);
+  assert.equal(h.values.size,0);
+});
+test('simultaneous signups cannot exceed the global successful-write budget',async()=>{
+  const h=harness({waitlist_write_budget:{day:TEST_DAY,count:999}});
+  const responses=await Promise.all([h.post({email:'a@example.com'}),h.post({email:'b@example.com'})]);
+  assert.deepEqual(responses.map(r=>r.status).sort(),[201,429]);assert.equal(h.values.get('counter'),1);assert.equal(h.values.get('waitlist_write_budget').count,1000);
+});
+
+test('read and write bursts recover at the next minute without waiting',async()=>{
+  const h=harness();
+  for(let i=0;i<30;i++) assert.equal((await h.post(null)).status,400);
+  assert.equal((await h.post(null)).status,429);
+  for(let i=0;i<300;i++) assert.equal((await h.get()).status,200);
+  assert.equal((await h.get()).status,429);
+  h.advance(60_000);
+  assert.equal((await h.post({email:'new@example.com'})).status,201);
+  assert.equal((await h.get()).status,200);
+});
+
+test('daily quota resets at UTC midnight while positions keep increasing',async()=>{
+  const h=harness({counter:7,waitlist_write_budget:{day:TEST_DAY,count:1000}},{now:Date.parse(`${TEST_DAY}T23:59:59.999Z`)});
+  assert.equal((await h.post({email:'new@example.com'})).status,429);
+  assert.equal(h.batches.length,0);
+  h.advance(1);
+  const response=await h.post({email:'new@example.com'});
+  assert.equal(response.status,201);assert.equal((await response.json()).position,8);
+  assert.equal(h.values.get('waitlist_write_budget').day,'2026-11-04');
+  assert.equal(h.values.get('waitlist_write_budget').count,1);
+});
