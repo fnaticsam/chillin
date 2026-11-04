@@ -15,22 +15,34 @@ interface WaitlistEntry {
 type Item = { operation: "create" | "upsert"; key: string; value: unknown };
 const REF_PATTERN = /^(?:[A-HJ-NP-Z2-9]{8}|[a-f0-9]{32})$/;
 const MAX_BODY_BYTES = 2048;
+// Vercel allows 100 Edge Config writes an hour per owner on paid plans (250 a
+// month on Hobby). Stop below that with a clear message rather than failing
+// opaquely once the platform rejects writes. Override with WAITLIST_HOURLY_WRITE_LIMIT.
+const HOURLY_WRITE_LIMIT = positiveInteger(process.env.WAITLIST_HOURLY_WRITE_LIMIT, 90);
+// Every Edge Config store holds 1 MB on every plan. Keep a reserve so the last
+// signups never fail opaquely; returning members are still recognised.
+const STORE_LIMIT_BYTES = 1_048_576;
+const STORE_RESERVE_BYTES = 65_536;
+function positiveInteger(raw: string | undefined, fallback: number) {
+  const value = Number(raw);
+  return raw && Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
 let edgeConfig: EdgeConfigClient | undefined;
 function reader() {
   return (edgeConfig ??= createClient(process.env.EDGE_CONFIG!));
 }
 
 class PublicError extends Error {
-  constructor(readonly status: number, message: string) { super(message); }
+  constructor(readonly status: number, message: string, readonly retryAfter = 60) { super(message); }
 }
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, retryAfter = 60) {
   return NextResponse.json(body, {
     status,
-    headers: { "Cache-Control": "no-store", ...(status === 429 || status === 503 ? { "Retry-After": "60" } : {}) },
+    headers: { "Cache-Control": "no-store", ...(status === 429 || status === 503 ? { "Retry-After": String(retryAfter) } : {}) },
   });
 }
 function failure(error: unknown) {
-  if (error instanceof PublicError) return json({ error: error.message }, error.status);
+  if (error instanceof PublicError) return json({ error: error.message }, error.status, error.retryAfter);
   // Never log request bodies, addresses, referral codes, upstream response bodies or tokens.
   console.error("[Waitlist] Storage request failed");
   return json({ error: "The waitlist is temporarily unavailable. Please try again." }, 503);
@@ -95,7 +107,7 @@ async function input(req: NextRequest) {
 async function management(path: string, init: RequestInit = {}) {
   const { EDGE_CONFIG_ID: id, VERCEL_API_TOKEN: token, VERCEL_TEAM_ID: team } = process.env;
   if (!id || !token) throw new Error("Missing storage configuration");
-  const url = new URL(`https://api.vercel.com/v1/edge-config/${encodeURIComponent(id)}/${path}`);
+  const url = new URL(`https://api.vercel.com/v1/edge-config/${encodeURIComponent(id)}${path && `/${path}`}`);
   if (team) url.searchParams.set("teamId", team);
   return fetch(url, {
     ...init, cache: "no-store", signal: AbortSignal.timeout(5000),
@@ -107,6 +119,22 @@ async function current<T>(key: string): Promise<T | undefined> {
   if (res.status === 404) return undefined;
   if (!res.ok) throw new Error("Storage read failed");
   return (await res.json()).value as T;
+}
+// Store size is read at most once a minute per instance: at the hourly write
+// limit the store grows by well under the reserve between refreshes.
+let storeSize: { at: number; bytes: number } | undefined;
+async function storeHasRoom() {
+  if (!storeSize || Date.now() - storeSize.at > 60_000) {
+    const res = await management("");
+    if (!res.ok) throw new Error("Storage read failed");
+    const { sizeInBytes } = await res.json();
+    if (typeof sizeInBytes !== "number" || !(sizeInBytes >= 0)) throw new Error("Invalid store metadata");
+    storeSize = { at: Date.now(), bytes: sizeInBytes };
+    if (sizeInBytes > STORE_LIMIT_BYTES - STORE_RESERVE_BYTES) {
+      console.error("[Waitlist] Edge Config store is within the 64 KB reserve of its 1 MB limit; new signups are refused");
+    }
+  }
+  return storeSize.bytes <= STORE_LIMIT_BYTES - STORE_RESERVE_BYTES;
 }
 function count(value: unknown): number {
   if (value === undefined) return 0;
@@ -143,20 +171,25 @@ export async function POST(req: NextRequest) {
       const referredBy = ref ? await current<WaitlistEntry>(`ref_${ref}`) : undefined;
       if (ref && !referredBy) throw new PublicError(400, "Please use a valid referral link.");
       const referralCount = ref ? count(await current<number>(`referrals_${ref}`)) : 0;
-      const day = new Date().toISOString().slice(0, 10);
-      const budget = await current<{ day: string; count: number }>("waitlist_write_budget");
-      const used = budget?.day === day ? count(budget.count) : 0;
-      // A global successful-write ceiling bounds storage growth across instances.
-      // This is a backstop, not bot detection; see docs/audit for remaining gates.
-      if (used >= 1000) throw new PublicError(429, "Today's signup limit has been reached. Please try again tomorrow.");
+      if (!(await storeHasRoom())) throw new PublicError(503, "The waitlist is full right now. Please check back soon.", 3600);
+      const now = new Date();
+      const hour = now.toISOString().slice(0, 13);
+      const budget = await current<{ hour: string; count: number }>("waitlist_write_budget");
+      const used = budget?.hour === hour ? count(budget.count) : 0;
+      // A global successful-write ceiling per UTC hour keeps the store under the
+      // platform's write limit. This is a backstop, not bot detection.
+      if (used >= HOURLY_WRITE_LIMIT) {
+        const retryAfter = 3600 - now.getUTCMinutes() * 60 - now.getUTCSeconds();
+        throw new PublicError(429, "This hour's signup limit has been reached. Please try again in a little while.", retryAfter);
+      }
       const position = total + 1;
       const refCode = randomBytes(16).toString("hex");
       const items: Item[] = [
         { operation: "create", key: `waitlist_position_${position}`, value: true },
         { operation: "create", key, value: refCode },
-        { operation: "create", key: `ref_${refCode}`, value: { email, refCode, referredBy: ref, position, createdAt: new Date().toISOString() } },
+        { operation: "create", key: `ref_${refCode}`, value: { email, refCode, referredBy: ref, position, createdAt: now.toISOString() } },
         { operation: "upsert", key: "counter", value: position },
-        { operation: "upsert", key: "waitlist_write_budget", value: { day, count: used + 1 } },
+        { operation: "upsert", key: "waitlist_write_budget", value: { hour, count: used + 1 } },
       ];
       if (ref) items.push({ operation: "upsert", key: `referrals_${ref}`, value: referralCount + 1 });
       const res = await management("items", { method: "PATCH", body: JSON.stringify({ items }) });

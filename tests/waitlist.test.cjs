@@ -6,6 +6,7 @@ const ts = require('typescript');
 const crypto = require('node:crypto');
 const TEST_NOW = Date.parse('2026-11-03T12:00:00.000Z');
 const TEST_DAY = new Date(TEST_NOW).toISOString().slice(0,10);
+const TEST_HOUR = new Date(TEST_NOW).toISOString().slice(0,13);
 const sha = email => crypto.createHash('sha256').update(email).digest('hex');
 
 const source = fs.readFileSync('app/api/waitlist/route.ts', 'utf8');
@@ -21,13 +22,14 @@ function harness(initial = {}, options = {}) {
   const sdk = { get: async key => values.get(key), getAll: async keys => Object.fromEntries(keys.map(key => [key, values.get(key)])) };
   vm.runInNewContext(code, {
     exports, Buffer, URL, AbortSignal, Uint8Array, Date: Clock,
-    process: { env: { EDGE_CONFIG_ID: 'test-store', VERCEL_API_TOKEN: 'test-only' } },
+    process: { env: { EDGE_CONFIG_ID: 'test-store', VERCEL_API_TOKEN: 'test-only', ...options.env } },
     console: { log: (...v) => logs.push(v), error: (...v) => logs.push(v) },
     require: name => name === 'next/server' ? { NextResponse: Response } : name === '@vercel/edge-config' ? { createClient: () => sdk } : options.crypto ?? crypto,
     fetch: async (url, init) => {
       calls.push({url:String(url),init});
       if (options.fail) return new Response('private@example.com secret token', {status:500});
       const path = url.pathname.split('/');
+      if (url.pathname === '/v1/edge-config/test-store') return Response.json({ sizeInBytes: options.sizeInBytes ?? 0, itemCount: values.size });
       if (init.method !== 'PATCH') {
         const key = decodeURIComponent(path.at(-1));
         return values.has(key) ? Response.json({ value: values.get(key) }) : new Response('',{status:404});
@@ -97,8 +99,11 @@ test('unknown referral and corrupt counters cannot mutate storage',async()=>{
   const corrupt=harness({counter:'2'});assert.equal((await corrupt.post({email:'a@example.com'})).status,503);assert.equal(corrupt.batches.length,0);
 });
 test('global budget and instance bursts return 429 with retry guidance',async()=>{
-  const h=harness({waitlist_write_budget:{day:TEST_DAY,count:1000}});
-  const limited=await h.post({email:'a@example.com'});assert.equal(limited.status,429);assert.equal(limited.headers.get('retry-after'),'60');assert.equal(h.batches.length,0);
+  const h=harness({waitlist_write_budget:{hour:TEST_HOUR,count:90}});
+  const limited=await h.post({email:'a@example.com'});assert.equal(limited.status,429);assert.equal(limited.headers.get('retry-after'),'3600');assert.equal(h.batches.length,0);
+  // A stale window and a higher configured limit both allow the write.
+  const stale=harness({waitlist_write_budget:{day:TEST_DAY,count:1000}});assert.equal((await stale.post({email:'a@example.com'})).status,201);
+  const raised=harness({waitlist_write_budget:{hour:TEST_HOUR,count:90}},{env:{WAITLIST_HOURLY_WRITE_LIMIT:'91'}});assert.equal((await raised.post({email:'a@example.com'})).status,201);
   const burst=harness();for(let i=0;i<30;i++) assert.equal((await burst.post({email:`u${i}@example.com`})).status,201);assert.equal((await burst.post({email:'late@example.com'})).status,429);
   // Malformed requests never reach storage and do not consume the write allowance.
   const malformed=harness();for(let i=0;i<40;i++) assert.equal((await malformed.post(null)).status,400);assert.equal((await malformed.post({email:'ok@example.com'})).status,201);
@@ -147,9 +152,9 @@ test('recognized HTTP 409 conflicts have a bounded retry budget',async()=>{
   assert.equal(h.values.size,0);
 });
 test('simultaneous signups cannot exceed the global successful-write budget',async()=>{
-  const h=harness({waitlist_write_budget:{day:TEST_DAY,count:999}});
+  const h=harness({waitlist_write_budget:{hour:TEST_HOUR,count:89}});
   const responses=await Promise.all([h.post({email:'a@example.com'}),h.post({email:'b@example.com'})]);
-  assert.deepEqual(responses.map(r=>r.status).sort(),[201,429]);assert.equal(h.values.get('counter'),1);assert.equal(h.values.get('waitlist_write_budget').count,1000);
+  assert.deepEqual(responses.map(r=>r.status).sort(),[201,429]);assert.equal(h.values.get('counter'),1);assert.equal(h.values.get('waitlist_write_budget').count,90);
 });
 
 test('read and write bursts recover at the next minute without waiting',async()=>{
@@ -163,13 +168,30 @@ test('read and write bursts recover at the next minute without waiting',async()=
   assert.equal((await h.get()).status,200);
 });
 
-test('daily quota resets at UTC midnight while positions keep increasing',async()=>{
-  const h=harness({counter:7,waitlist_write_budget:{day:TEST_DAY,count:1000}},{now:Date.parse(`${TEST_DAY}T23:59:59.999Z`)});
-  assert.equal((await h.post({email:'new@example.com'})).status,429);
+test('hourly quota resets on the UTC hour while positions keep increasing',async()=>{
+  const h=harness({counter:7,waitlist_write_budget:{hour:TEST_HOUR,count:90}},{now:Date.parse(`${TEST_DAY}T12:59:59.999Z`)});
+  const limited=await h.post({email:'new@example.com'});
+  assert.equal(limited.status,429);assert.equal(limited.headers.get('retry-after'),'1');
   assert.equal(h.batches.length,0);
   h.advance(1);
   const response=await h.post({email:'new@example.com'});
   assert.equal(response.status,201);assert.equal((await response.json()).position,8);
-  assert.equal(h.values.get('waitlist_write_budget').day,'2026-11-04');
+  assert.equal(h.values.get('waitlist_write_budget').hour,'2026-11-03T13');
   assert.equal(h.values.get('waitlist_write_budget').count,1);
+});
+test('a nearly full store refuses new signups but still recognises members',async()=>{
+  const full=1048576-65536+1;
+  const h=harness({counter:1,[`email_v2_${sha('member@example.com')}`]:'ABCDEFGH',ref_ABCDEFGH:{email:'member@example.com',refCode:'ABCDEFGH',position:1}},{sizeInBytes:full});
+  const refused=await h.post({email:'new@example.com'});
+  assert.equal(refused.status,503);assert.equal(refused.headers.get('retry-after'),'3600');
+  assert.match((await refused.json()).error,/full/);assert.equal(h.batches.length,0);
+  assert.equal(JSON.stringify(h.logs).includes('1 MB limit'),true);
+  const member=await h.post({email:'member@example.com'});
+  assert.equal(member.status,200);assert.equal((await member.json()).position,1);
+  // Exactly at the reserve boundary the store still has room, and the size is re-read once a minute.
+  const edge=harness({}, {sizeInBytes:full-1});
+  const metadata=()=>edge.calls.filter(c=>new URL(c.url).pathname==='/v1/edge-config/test-store').length;
+  assert.equal((await edge.post({email:'a@example.com'})).status,201);assert.equal((await edge.post({email:'b@example.com'})).status,201);assert.equal(metadata(),1);
+  edge.advance(60_001);assert.equal((await edge.post({email:'c@example.com'})).status,201);assert.equal(metadata(),2);
+  const broken=harness({}, {sizeInBytes:'unknown'});assert.equal((await broken.post({email:'a@example.com'})).status,503);
 });
