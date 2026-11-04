@@ -47,7 +47,7 @@ function burst(kind: keyof typeof bursts) {
   }
 }
 async function input(req: NextRequest) {
-  if (req.headers.get("content-type")?.split(";")[0].trim() !== "application/json") {
+  if (req.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
     throw new PublicError(415, "Please send JSON.");
   }
   if (Number(req.headers.get("content-length")) > MAX_BODY_BYTES) {
@@ -158,9 +158,18 @@ export async function POST(req: NextRequest) {
       if (ref) items.push({ operation: "upsert", key: `referrals_${ref}`, value: referralCount + 1 });
       const res = await management("items", { method: "PATCH", body: JSON.stringify({ items }) });
       if (res.ok) return json({ message: "Welcome to the founding crew!", position, refCode, total: position }, 201);
-      // Only retry an explicit HTTP conflict. A 400 can be a permanent validation
-      // failure; transport errors/5xx may have committed. Client retries are idempotent.
-      if (res.status !== 409) throw new Error("Storage write failed");
+      // An explicit HTTP conflict is retried. Vercel documents the batch as
+      // all-or-nothing but not which 4xx a failed create returns, so a 400 is
+      // retried only when re-reading the create-only keys confirms a collision;
+      // otherwise it is a permanent validation failure. 5xx/transport errors may
+      // have committed and fail once: client retries are idempotent.
+      if (res.status === 409) continue;
+      if (res.status !== 400) throw new Error("Storage write failed");
+      let collision = false;
+      for (const item of items) {
+        if (item.operation === "create" && (await current(item.key)) !== undefined) { collision = true; break; }
+      }
+      if (!collision) throw new Error("Storage write failed");
     }
     throw new PublicError(503, "The waitlist is busy. Please try again shortly.");
   } catch (error) { return failure(error); }

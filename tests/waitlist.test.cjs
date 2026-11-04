@@ -6,6 +6,7 @@ const ts = require('typescript');
 const crypto = require('node:crypto');
 const TEST_NOW = Date.parse('2026-11-03T12:00:00.000Z');
 const TEST_DAY = new Date(TEST_NOW).toISOString().slice(0,10);
+const sha = email => crypto.createHash('sha256').update(email).digest('hex');
 
 const source = fs.readFileSync('app/api/waitlist/route.ts', 'utf8');
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -34,7 +35,7 @@ function harness(initial = {}, options = {}) {
       const { items } = JSON.parse(init.body); batches.push(items);
       if (options.patchFailure) return new Response(options.patchFailure.body, {status:options.patchFailure.status});
       // Model the required batch/uniqueness guarantees; provider integration is still a rollout gate.
-      if (items.some(item => item.operation === 'create' && values.has(item.key))) return new Response('',{status:409});
+      if (items.some(item => item.operation === 'create' && values.has(item.key))) return new Response('',{status:options.collisionStatus ?? 409});
       for (const item of items) values.set(item.key,item.value);
       if (uncertain) { uncertain=false; return new Response('private@example.com', {status:500}); }
       return Response.json({status:'ok'});
@@ -58,6 +59,8 @@ test('bounds streamed and declared bodies and rejects unsupported content types/
   assert.equal((await h.post({email:'a@example.com'},{headers:{'content-type':'text/plain'}})).status,415);
   assert.equal((await h.post({email:'a@example.com'},{headers:{origin:'https://other.test'}})).status,403);
   assert.equal(h.calls.length,0);
+  // Media types are case-insensitive (RFC 9110).
+  assert.equal((await harness().post({email:'a@example.com'},{headers:{'content-type':'Application/JSON; charset=utf-8'}})).status,201);
 });
 test('different punctuation creates distinct keys and normalized duplicates are idempotent',async()=>{
   const h=harness();const a=await h.post({email:'a.b@example.com'});const b=await h.post({email:'a+b@example.com'});
@@ -117,10 +120,19 @@ test('permanent or unrecognized upstream 400 errors fail once without disclosing
     assert.equal(response.status,503);
     assert.deepEqual(await response.json(),{error:'The waitlist is temporarily unavailable. Please try again.'});
     assert.equal(h.batches.length,1);
-    assert.equal(h.calls.at(-1).init.method,'PATCH');
+    // After a 400 the route re-reads the create-only keys to rule out a collision, then fails once.
+    const afterPatch=h.calls.slice(h.calls.findIndex(c=>c.init.method==='PATCH')+1);
+    assert.deepEqual(afterPatch.map(c=>decodeURIComponent(c.url.split('/').at(-1).split('?')[0])),['waitlist_position_1',`email_v2_${sha('private@example.com')}`,h.batches[0][2].key]);
     assert.equal(h.values.size,0);
     assert.deepEqual(h.logs,[['[Waitlist] Storage request failed']]);
   }
+});
+test('create collisions reported as 400 are confirmed by re-read and retried',async()=>{
+  const h=harness({},{collisionStatus:400});
+  const responses=await Promise.all([h.post({email:'a@example.com'}),h.post({email:'b@example.com'})]);
+  assert.deepEqual(responses.map(r=>r.status).sort(),[201,201]);
+  const positions=await Promise.all(responses.map(async r=>(await r.json()).position));
+  assert.deepEqual(positions.sort(),[1,2]);assert.equal(h.batches.length,3);assert.equal(h.values.get('counter'),2);
 });
 test('recognized HTTP 409 conflicts have a bounded retry budget',async()=>{
   const h=harness({}, {patchFailure:{status:409,body:''}});
