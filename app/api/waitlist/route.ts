@@ -126,17 +126,20 @@ async function existing(email: string, key: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    burst("write");
     const origin = req.headers.get("origin");
     if (origin && origin !== req.nextUrl.origin) throw new PublicError(403, "Please sign up from this site.");
     const { email, ref } = await input(req);
+    // Count only requests that reach storage, so malformed traffic cannot use up
+    // this instance's write allowance for everyone else.
+    burst("write");
     const key = `email_v2_${createHash("sha256").update(email).digest("hex")}`;
     for (let attempt = 0; attempt < 4; attempt++) {
       // Read the counter BEFORE dependent values. The create-only position marker
       // serializes the whole batch across instances; a stale read cannot commit.
       const total = count(await current<number>("counter"));
       const entry = await existing(email, key);
-      if (entry) return json({ message: "You're already on the list! We'll be in touch soon.", alreadyExists: true, position: entry.position, refCode: entry.refCode, total });
+      // Re-read the counter: the entry may have been committed after the read above.
+      if (entry) return json({ message: "You're already on the list! We'll be in touch soon.", alreadyExists: true, position: entry.position, refCode: entry.refCode, total: Math.max(total, count(await current<number>("counter")), entry.position) });
       const referredBy = ref ? await current<WaitlistEntry>(`ref_${ref}`) : undefined;
       if (ref && !referredBy) throw new PublicError(400, "Please use a valid referral link.");
       const referralCount = ref ? count(await current<number>(`referrals_${ref}`)) : 0;
